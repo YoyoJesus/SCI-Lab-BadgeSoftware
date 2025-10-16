@@ -65,7 +65,10 @@ function Test-PythonAvailable {
 
 # Function to check if required files exist
 function Test-RequiredFiles {
-    $requiredFiles = @("data_collection.py", "live_graph_viewer.py")
+    $requiredFiles = @(
+        "Data Collection & Visualization/data_collection.py",
+        "Data Collection & Visualization/live_graph_viewer.py"
+    )
     $allFilesExist = $true
     
     foreach ($file in $requiredFiles) {
@@ -90,11 +93,31 @@ function Start-PythonProcess {
     
     try {
         Write-Host "[$Icon] Starting $ProcessName..." -ForegroundColor Yellow
-        $process = Start-Process -FilePath "python" -ArgumentList $ScriptName -PassThru -WindowStyle Normal
+        
+        # Get the full path to the script
+        $fullScriptPath = Join-Path -Path $ScriptRoot -ChildPath "Data Collection & Visualization" | Join-Path -ChildPath (Split-Path -Leaf $ScriptName)
+        
+        # Start the process with explicit working directory and better error handling
+        $processInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $processInfo.FileName = "python"
+        $processInfo.Arguments = "`"$fullScriptPath`""
+        $processInfo.WorkingDirectory = $ScriptRoot
+        $processInfo.UseShellExecute = $true
+        $processInfo.CreateNoWindow = $false
+        $processInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Normal
+        
+        $process = [System.Diagnostics.Process]::Start($processInfo)
         
         if ($process) {
-            Write-Host "[OK] $ProcessName started successfully (PID: $($process.Id))" -ForegroundColor Green
-            return $process
+            # Give the process a moment to start and check if it's still running
+            Start-Sleep -Milliseconds 500
+            if (!$process.HasExited) {
+                Write-Host "[OK] $ProcessName started successfully (PID: $($process.Id))" -ForegroundColor Green
+                return $process
+            } else {
+                Write-Host "[ERROR] $ProcessName exited immediately (Exit Code: $($process.ExitCode))" -ForegroundColor Red
+                return $null
+            }
         } else {
             Write-Host "[ERROR] Failed to start $ProcessName" -ForegroundColor Red
             return $null
@@ -117,21 +140,49 @@ function Monitor-Processes {
     Write-Host ""
     
     try {
+        $monitorCount = 0
         while ($true) {
             $runningProcesses = @()
+            $exitedProcesses = @()
             
             foreach ($proc in $Processes) {
-                if ($proc -and !$proc.HasExited) {
-                    $runningProcesses += $proc
+                if ($proc) {
+                    if (!$proc.HasExited) {
+                        $runningProcesses += $proc
+                    } else {
+                        $exitedProcesses += @{
+                            Process = $proc
+                            ExitCode = $proc.ExitCode
+                            ExitTime = $proc.ExitTime
+                        }
+                    }
                 }
             }
             
             if ($runningProcesses.Count -eq 0) {
                 Write-Host "[INFO] All processes have ended." -ForegroundColor Yellow
+                
+                # Show exit information for debugging
+                if ($exitedProcesses.Count -gt 0) {
+                    Write-Host ""
+                    Write-Host "[DEBUG] Process Exit Information:" -ForegroundColor Cyan
+                    foreach ($exitInfo in $exitedProcesses) {
+                        $exitCode = $exitInfo.ExitCode
+                        $exitTime = $exitInfo.ExitTime
+                        Write-Host "[DEBUG] PID $($exitInfo.Process.Id) exited with code $exitCode at $exitTime" -ForegroundColor Gray
+                        
+                        if ($exitCode -eq 0) {
+                            Write-Host "[INFO] Exit code 0 = Normal completion" -ForegroundColor Green
+                        } else {
+                            Write-Host "[WARNING] Exit code $exitCode = Process ended with error or early termination" -ForegroundColor Yellow
+                        }
+                    }
+                }
                 break
             }
             
-            Write-Host "[STATUS] Running processes: $($runningProcesses.Count)" -ForegroundColor Green
+            $monitorCount++
+            Write-Host "[STATUS] Running processes: $($runningProcesses.Count) (Check #$monitorCount)" -ForegroundColor Green
             Start-Sleep -Seconds 5
         }
     }
@@ -224,9 +275,11 @@ try {
     
     if (!$GraphOnly) {
         Write-Host "[DATA] Data Collection: Collecting data from voice badges" -ForegroundColor Cyan
+        Write-Host "[TIP] If data collection exits quickly, ensure badges are nearby and powered on" -ForegroundColor Yellow
     }
     if (!$DataOnly) {
         Write-Host "[GRAPH] Live Graph Viewer: Real-time visualization with badge controls" -ForegroundColor Cyan
+        Write-Host "[TIP] Graph viewer needs CSV data files to display - run data collection first" -ForegroundColor Yellow
     }
     
     # Monitor processes
