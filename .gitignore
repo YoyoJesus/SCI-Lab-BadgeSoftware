@@ -210,3 +210,8 @@ __marimo__/
 .badge_data/*
 badge_data/
 badge_data/*
+
+# Processed Data Folder
+Data Cleanup and Normalization/processed_data/
+Data Cleanup and Normalization/processed_data/*
+
