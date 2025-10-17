@@ -21,7 +21,11 @@ toggle_frame = None
 
 def read_latest_csv():
     """Read the most recent CSV file in the directory"""
-    csv_files = list(Path('.').glob('Badge*_data_*.csv'))
+    # Look for badge CSV files in the 'badge_data' subfolder
+    badge_data_dir = Path('..') / 'badge_data'
+    if not badge_data_dir.exists():
+        badge_data_dir = Path('badge_data')  # fallback for direct run from root
+    csv_files = list(badge_data_dir.glob('AllBadges_data_*.csv'))
     
     # If no real data files, try the test file
     if not csv_files:
@@ -35,21 +39,27 @@ def read_latest_csv():
     latest_file = max(csv_files, key=os.path.getctime)
     
     data = []
+    import traceback
     try:
+        print(f"[DEBUG] Attempting to read CSV: {latest_file}")
         with open(latest_file, 'r') as file:
             reader = csv.DictReader(file)
+            print(f"[DEBUG] CSV columns: {reader.fieldnames}")
             for row in reader:
-                # Use the actual field names from the CSV files
-                data.append({
-                    'badge_name': row['Badge_Name'],
-                    'sound': float(row['Sound_Level']) if row['Sound_Level'] != 'N/A' else 0,
-                    'rssi': float(row['RSSI']) if row['RSSI'] != 'N/A' else 0,
-                    'acceleration': float(row['Acceleration']) if row['Acceleration'] != 'N/A' else 0
-                })
+                try:
+                    data.append({
+                        'badge_name': row['Badge_Name'],
+                        'sound': float(row['Sound_Level']) if row['Sound_Level'] != 'N/A' else 0,
+                        'rssi': float(row['RSSI']) if row['RSSI'] != 'N/A' else 0,
+                        'acceleration': float(row['Acceleration']) if row['Acceleration'] != 'N/A' else 0
+                    })
+                except Exception as row_e:
+                    print(f"[ERROR] Problem with row: {row}\n{row_e}")
+                    traceback.print_exc()
     except Exception as e:
-        print(f"Error reading CSV '{latest_file}': {e}")
+        print(f"[ERROR] Exception reading CSV '{latest_file}': {e}")
+        traceback.print_exc()
         print(f"Available columns: {list(reader.fieldnames) if 'reader' in locals() else 'Unknown'}")
-    
     return data
 
 def assign_badge_color(badge_name):

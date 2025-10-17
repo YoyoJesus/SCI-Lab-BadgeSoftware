@@ -5,7 +5,7 @@ Badge Data Processing Tool
 This script processes badge data files and:
 1. Allows user to label time periods as 'active' or 'not active'
 2. Splits data by badge name
-3. Calculates statistics (min, max, avg, std) over 20-second windows
+3. Labels individual data points based on time period selections
 4. Exports processed data to CSV for AI tools
 
 Author: Badge Data Processing Tool
@@ -30,7 +30,6 @@ class BadgeDataProcessor:
         self.data = None
         self.processed_data = []
         self.labels = []  # Store time periods and their labels
-        self.window_size = 20  # 20 seconds
         self.output_folder = Path("processed_data")
         self.output_folder.mkdir(exist_ok=True)
         
@@ -162,7 +161,7 @@ class BadgeDataProcessor:
         ttk.Label(button_frame, text="Metric:").pack(side=tk.LEFT, padx=5)
         self.metric_var = tk.StringVar(value="Sound_Level")
         metric_combo = ttk.Combobox(button_frame, textvariable=self.metric_var,
-                                   values=["Sound_Level", "RSSI", "Acceleration"])
+                                   values=["Sound_Level", "Acceleration"])
         metric_combo.pack(side=tk.LEFT, padx=5)
         metric_combo.bind('<<ComboboxSelected>>', self.update_plot)
         
@@ -179,7 +178,7 @@ class BadgeDataProcessor:
                   command=self.process_and_export).pack(side=tk.RIGHT, padx=5)
         
         # Status label
-        self.status_label = ttk.Label(main_frame, text="Ready to label data")
+        self.status_label = ttk.Label(main_frame, text="Ready to select - click and drag on the graph to select a time period")
         self.status_label.pack(pady=5)
         
         # Selection variables
@@ -244,132 +243,176 @@ class BadgeDataProcessor:
         """Handle mouse press for selection"""
         if event.inaxes != self.ax:
             return
+        # Clear any existing selection first
+        self.clear_selection()
         self.selection_start = event.xdata
+        print(f"[DEBUG] Mouse press at {event.xdata}")
         
     def on_motion(self, event):
         """Handle mouse motion for selection"""
-        if self.selection_start is None or event.inaxes != self.ax:
+        if self.selection_start is None or event.inaxes != self.ax or event.xdata is None:
             return
             
-        # Remove previous selection rectangle
-        if self.selection_rect is not None:
-            self.selection_rect.remove()
+        # Store the current selection end for drawing
+        self.selection_end_temp = event.xdata
+        
+        # Redraw the plot with the current selection
+        self.update_plot_with_selection()
+    
+    def update_plot_with_selection(self):
+        """Update the plot and show current selection"""
+        # Get current selections
+        badge_name = self.badge_var.get()
+        metric = self.metric_var.get()
+        
+        if not badge_name or not metric:
+            return
+        
+        # Filter data for selected badge
+        badge_data = self.data[self.data['Badge_Name'] == badge_name].copy()
+        badge_data = badge_data.sort_values('Timestamp')
+        
+        # Clear and plot
+        self.ax.clear()
+        self.ax.plot(badge_data['Timestamp'], badge_data[metric], 'b-', alpha=0.7, linewidth=1)
+        
+        # Draw existing labels
+        self.draw_existing_labels()
+        
+        # Draw current selection if active
+        if self.selection_start is not None and hasattr(self, 'selection_end_temp'):
+            start_x = min(self.selection_start, self.selection_end_temp)
+            width = abs(self.selection_end_temp - self.selection_start)
             
-        # Draw new selection rectangle
-        start_x = min(self.selection_start, event.xdata)
-        width = abs(event.xdata - self.selection_start)
-        self.selection_rect = Rectangle((start_x, self.ax.get_ylim()[0]),
-                                       width,
-                                       self.ax.get_ylim()[1] - self.ax.get_ylim()[0],
-                                       alpha=0.2, facecolor='blue')
-        self.ax.add_patch(self.selection_rect)
-        self.canvas.draw()
+            if width > 0:
+                rect = Rectangle((start_x, self.ax.get_ylim()[0]),
+                               width,
+                               self.ax.get_ylim()[1] - self.ax.get_ylim()[0],
+                               alpha=0.2, facecolor='blue')
+                self.ax.add_patch(rect)
+        
+        self.ax.set_xlabel('Time')
+        self.ax.set_ylabel(metric)
+        self.ax.set_title(f'{badge_name} - {metric}')
+        self.ax.grid(True, alpha=0.3)
+        
+        # Format x-axis
+        self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+        self.ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=1))
+        plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=45)
+        
+        self.fig.tight_layout()
+        self.canvas.draw_idle()
     
     def on_release(self, event):
         """Handle mouse release for selection"""
-        if self.selection_start is None or event.inaxes != self.ax:
+        if self.selection_start is None or event.inaxes != self.ax or event.xdata is None:
+            self.clear_selection()
             return
             
         self.selection_end = event.xdata
+        print(f"[DEBUG] Mouse release at {event.xdata}")
         
-        # Convert from matplotlib dates to datetime and make timezone-naive
-        start_time = mdates.num2date(min(self.selection_start, self.selection_end)).replace(tzinfo=None)
-        end_time = mdates.num2date(max(self.selection_start, self.selection_end)).replace(tzinfo=None)
-        
-        self.status_label.config(text=f"Selected: {start_time.strftime('%H:%M:%S')} to {end_time.strftime('%H:%M:%S')}")
-    
-    def label_selection(self, label):
-        """Label the current selection"""
-        if self.selection_start is None or self.selection_end is None:
-            messagebox.showwarning("Warning", "Please select a time period first")
+        # Check if we have a valid selection (minimum width)
+        if abs(self.selection_end - self.selection_start) < 0.001:  # Very small selection
+            self.clear_selection()
+            self.status_label.config(text="Selection too small - please drag to select a time range")
             return
         
         # Convert from matplotlib dates to datetime and make timezone-naive
-        start_time = mdates.num2date(min(self.selection_start, self.selection_end)).replace(tzinfo=None)
-        end_time = mdates.num2date(max(self.selection_start, self.selection_end)).replace(tzinfo=None)
+        try:
+            start_time = mdates.num2date(min(self.selection_start, self.selection_end)).replace(tzinfo=None)
+            end_time = mdates.num2date(max(self.selection_start, self.selection_end)).replace(tzinfo=None)
+            
+            self.status_label.config(text=f"Selected: {start_time.strftime('%H:%M:%S')} to {end_time.strftime('%H:%M:%S')} - Use label buttons to classify")
+            
+            # Store final selection for labeling
+            self.final_selection_start = self.selection_start
+            self.final_selection_end = self.selection_end
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to convert selection times: {e}")
+            self.clear_selection()
+    
+    def label_selection(self, label):
+        """Label the current selection"""
+        if not hasattr(self, 'final_selection_start') or not hasattr(self, 'final_selection_end'):
+            messagebox.showwarning("Warning", "Please select a time period first by clicking and dragging on the graph")
+            return
         
-        # Add label
-        self.labels.append({
-            'badge': self.badge_var.get(),
-            'start': start_time,
-            'end': end_time,
-            'label': label
-        })
-        
-        self.status_label.config(text=f"Labeled {len(self.labels)} segments")
-        self.clear_selection()
-        self.update_plot()
+        # Convert from matplotlib dates to datetime and make timezone-naive
+        try:
+            start_time = mdates.num2date(min(self.final_selection_start, self.final_selection_end)).replace(tzinfo=None)
+            end_time = mdates.num2date(max(self.final_selection_start, self.final_selection_end)).replace(tzinfo=None)
+            
+            # Add label
+            self.labels.append({
+                'badge': self.badge_var.get(),
+                'start': start_time,
+                'end': end_time,
+                'label': label
+            })
+            
+            label_text = "Active" if label == "active" else "Not Active"
+            self.status_label.config(text=f"Labeled as '{label_text}' - Total labels: {len(self.labels)}")
+            
+            # Clear selection and update plot
+            self.clear_selection()
+            self.update_plot()
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to label selection: {e}")
+            messagebox.showerror("Error", f"Failed to label selection: {e}")
+            self.clear_selection()
     
     def clear_selection(self):
         """Clear current selection"""
-        if self.selection_rect is not None:
-            self.selection_rect.remove()
-            self.selection_rect = None
         self.selection_start = None
         self.selection_end = None
-        self.canvas.draw()
+        self.selection_rect = None
+        
+        # Clear temporary selection variables
+        if hasattr(self, 'selection_end_temp'):
+            delattr(self, 'selection_end_temp')
+        if hasattr(self, 'final_selection_start'):
+            delattr(self, 'final_selection_start')
+        if hasattr(self, 'final_selection_end'):
+            delattr(self, 'final_selection_end')
+        
+        # Update plot to remove selection rectangle
+        self.update_plot()
+        
+        # Update status
+        if hasattr(self, 'status_label'):
+            self.status_label.config(text="Ready to select - click and drag on the graph to select a time period")
     
-    def calculate_window_statistics(self, badge_data, window_size_seconds=20):
-        """Calculate statistics over sliding windows"""
-        badge_data = badge_data.sort_values('Timestamp')
+    def calculate_rolling_statistics(self, badge_data, window_seconds=20):
+        """Calculate rolling statistics for sound and acceleration over time windows"""
+        badge_data = badge_data.sort_values('Timestamp').copy()
         
-        # Create time windows
-        start_time = badge_data['Timestamp'].min()
-        end_time = badge_data['Timestamp'].max()
+        # Set timestamp as index for rolling calculations
+        badge_data_indexed = badge_data.set_index('Timestamp')
         
-        windows = []
-        current_time = start_time
+        # Convert window_seconds to pandas timedelta
+        window_size = f'{window_seconds}s'
         
-        while current_time < end_time:
-            window_end = current_time + timedelta(seconds=window_size_seconds)
-            
-            # Get data in this window
-            window_data = badge_data[
-                (badge_data['Timestamp'] >= current_time) & 
-                (badge_data['Timestamp'] < window_end)
-            ]
-            
-            if len(window_data) > 0:
-                # Calculate statistics
-                stats = {
-                    'window_start': current_time,
-                    'window_end': window_end,
-                    'window_center': current_time + timedelta(seconds=window_size_seconds/2),
-                    'badge_name': badge_data['Badge_Name'].iloc[0],
-                    'data_points': len(window_data),
-                    
-                    # Sound Level statistics
-                    'sound_min': window_data['Sound_Level'].min(),
-                    'sound_max': window_data['Sound_Level'].max(),
-                    'sound_mean': window_data['Sound_Level'].mean(),
-                    'sound_std': window_data['Sound_Level'].std(),
-                    
-                    # Acceleration statistics
-                    'accel_min': window_data['Acceleration'].min(),
-                    'accel_max': window_data['Acceleration'].max(),
-                    'accel_mean': window_data['Acceleration'].mean(),
-                    'accel_std': window_data['Acceleration'].std(),
-                }
-                
-                # Find label for this window
-                window_label = 'unknown'
-                for label in self.labels:
-                    if label['badge'] == stats['badge_name']:
-                        # Normalize all datetime objects for safe comparison
-                        label_start = self.normalize_datetime(label['start'])
-                        label_end = self.normalize_datetime(label['end'])
-                        window_time = self.normalize_datetime(current_time)
-                        
-                        if label_start <= window_time <= label_end:
-                            window_label = label['label']
-                            break
-                
-                stats['activity_label'] = window_label
-                windows.append(stats)
-            
-            current_time += timedelta(seconds=window_size_seconds)
+        # Calculate rolling statistics for Sound_Level
+        badge_data['sound_min_20s'] = badge_data_indexed['Sound_Level'].rolling(window=window_size, min_periods=1).min().values
+        badge_data['sound_max_20s'] = badge_data_indexed['Sound_Level'].rolling(window=window_size, min_periods=1).max().values
+        badge_data['sound_mean_20s'] = badge_data_indexed['Sound_Level'].rolling(window=window_size, min_periods=1).mean().values
+        badge_data['sound_std_20s'] = badge_data_indexed['Sound_Level'].rolling(window=window_size, min_periods=1).std().values
         
-        return windows
+        # Calculate rolling statistics for Acceleration
+        badge_data['accel_min_20s'] = badge_data_indexed['Acceleration'].rolling(window=window_size, min_periods=1).min().values
+        badge_data['accel_max_20s'] = badge_data_indexed['Acceleration'].rolling(window=window_size, min_periods=1).max().values
+        badge_data['accel_mean_20s'] = badge_data_indexed['Acceleration'].rolling(window=window_size, min_periods=1).mean().values
+        badge_data['accel_std_20s'] = badge_data_indexed['Acceleration'].rolling(window=window_size, min_periods=1).std().values
+        
+        # Fill NaN values with 0 for std (happens when there's only 1 data point)
+        badge_data['sound_std_20s'] = badge_data['sound_std_20s'].fillna(0)
+        badge_data['accel_std_20s'] = badge_data['accel_std_20s'].fillna(0)
+        
+        return badge_data
     
     def process_and_export(self):
         """Process all badge data and export to CSV"""
@@ -382,19 +425,41 @@ class BadgeDataProcessor:
         
         print("Processing badge data...")
         
-        all_windows = []
-        badges = self.data['Badge_Name'].unique()
+        # Create a copy of the original data
+        processed_data = self.data.copy()
+        
+        # Calculate rolling statistics for each badge
+        all_processed_data = []
+        badges = processed_data['Badge_Name'].unique()
         
         for badge in badges:
-            print(f"Processing {badge}...")
-            badge_data = self.data[self.data['Badge_Name'] == badge]
+            print(f"Calculating statistics for {badge}...")
+            badge_data = processed_data[processed_data['Badge_Name'] == badge]
             
-            # Calculate windowed statistics
-            windows = self.calculate_window_statistics(badge_data, self.window_size)
-            all_windows.extend(windows)
+            # Calculate rolling statistics
+            badge_with_stats = self.calculate_rolling_statistics(badge_data, window_seconds=20)
+            all_processed_data.append(badge_with_stats)
         
-        # Convert to DataFrame
-        processed_df = pd.DataFrame(all_windows)
+        # Combine all badge data back together
+        processed_data = pd.concat(all_processed_data, ignore_index=True)
+        processed_data = processed_data.sort_values(['Badge_Name', 'Timestamp']).reset_index(drop=True)
+        
+        # Add activity labels to each data point
+        processed_data['activity_label'] = 'unknown'
+        
+        for _, row in processed_data.iterrows():
+            badge_name = row['Badge_Name']
+            timestamp = self.normalize_datetime(row['Timestamp'])
+            
+            # Find matching label for this data point
+            for label in self.labels:
+                if label['badge'] == badge_name:
+                    label_start = self.normalize_datetime(label['start'])
+                    label_end = self.normalize_datetime(label['end'])
+                    
+                    if label_start <= timestamp <= label_end:
+                        processed_data.loc[_, 'activity_label'] = label['label']
+                        break
         
         # Generate timestamp and create session folder
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -407,7 +472,7 @@ class BadgeDataProcessor:
         summary_file = session_folder / f"processing_summary_{timestamp}.txt"
         
         # Export to CSV
-        processed_df.to_csv(output_file, index=False)
+        processed_data.to_csv(output_file, index=False)
         
         # Also save labels for reference
         with open(labels_file, 'w') as f:
@@ -419,12 +484,14 @@ class BadgeDataProcessor:
             } for label in self.labels], f, indent=2)
         
         # Create detailed summary
-        activity_counts = processed_df['activity_label'].value_counts()
+        activity_counts = processed_data['activity_label'].value_counts()
+        badges = processed_data['Badge_Name'].unique()
+        
         summary_text = f"""Badge Data Processing Summary
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 Processing Configuration:
-- Total windows processed: {len(processed_df)}
+- Total data points processed: {len(processed_data)}
 - Badges processed: {len(badges)}
 - Badge names: {', '.join(sorted(badges))}
 - Labels created: {len(self.labels)}
@@ -433,19 +500,29 @@ Activity Distribution:
 {activity_counts.to_string()}
 
 Data Quality:
-- Data points per badge: {processed_df.groupby('badge_name')['data_points'].sum().to_dict()}
-- Average data points per window: {processed_df['data_points'].mean():.1f}
+- Data points per badge: {processed_data.groupby('Badge_Name').size().to_dict()}
+- Total labeled points: {len(processed_data[processed_data['activity_label'] != 'unknown'])}
 
 Output Files:
 - Processed data: {output_file.name}
 - Activity labels: {labels_file.name}
 - This summary: {summary_file.name}
 
-Statistics Calculated:
-For each time window, the following statistics were calculated:
-- Sound Level: min, max, mean, standard deviation
-- Acceleration: min, max, mean, standard deviation
-- Activity Label: active, not_active, or unknown
+Data Columns:
+- Timestamp: Original timestamp of data point
+- Badge_Name: Name of the badge
+- Sound_Level: Sound level measurement
+- Acceleration: Acceleration measurement  
+- Raw_Data: Original raw data string
+- sound_min_20s: Minimum sound level in 20-second rolling window
+- sound_max_20s: Maximum sound level in 20-second rolling window
+- sound_mean_20s: Mean sound level in 20-second rolling window
+- sound_std_20s: Standard deviation of sound level in 20-second rolling window
+- accel_min_20s: Minimum acceleration in 20-second rolling window
+- accel_max_20s: Maximum acceleration in 20-second rolling window
+- accel_mean_20s: Mean acceleration in 20-second rolling window
+- accel_std_20s: Standard deviation of acceleration in 20-second rolling window
+- activity_label: active, not_active, or unknown
 """
         
         # Save summary to file
@@ -463,7 +540,7 @@ Files saved:
 ✓ {summary_file.name}
 
 Summary:
-- Total windows: {len(processed_df)}
+- Total data points: {len(processed_data)}
 - Badges processed: {len(badges)}
 - Labels created: {len(self.labels)}
 
