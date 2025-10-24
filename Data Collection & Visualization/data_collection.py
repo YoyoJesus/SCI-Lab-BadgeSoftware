@@ -20,13 +20,15 @@ RSSI_CHAR_UUID = "a33b0200-6238-11ec-90d6-0242ac120003"  # characteristic (rssi)
 ACC_CHAR_UUID = "a33b0300-6238-11ec-90d6-0242ac120003"  # characteristic (acc)
 
 BADGE_ADDRESS = {
-    "D9:6D:90:A1:2B:3A": "Badge06",
     "99:0F:9A:A1:83:96": "Badge01",
     "F9:5C:35:CF:D8:53": "Badge09",
     "E9:7D:DA:71:28:2C": "Badge05",
     "F9:54:91:BD:45:86": "Badge10",
     "AA:F4:C8:5D:45:ED": "Badge04",
     "71:F2:53:B7:47:FA": "Badge08",
+    "01:1B:DE:95:4E:D9": "Badge03",
+    "08:6B:88:33:3E:44": "Badge07",
+    "D9:6D:90:A1:2B:3A": "Badge06",
 }
 
 
