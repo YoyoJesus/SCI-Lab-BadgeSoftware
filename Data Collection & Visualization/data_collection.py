@@ -29,6 +29,7 @@ BADGE_ADDRESS = {
     "01:1B:DE:95:4E:D9": "Badge03",
     "08:6B:88:33:3E:44": "Badge07",
     "D9:6D:90:A1:2B:3A": "Badge06",
+    "3B:DE:58:7D:EF:BA": "HM Badge No.01",
 }
 
 
@@ -201,6 +202,8 @@ async def connection_run(address):
     retry_count = 0
     
     client = BleakClient(address)
+    # Placeholder for the data characteristic UUID chosen at discovery time
+    data_char_uuid = None
     
     # Try to connect with retries
     while retry_count < max_retries:
@@ -277,40 +280,93 @@ async def connection_run(address):
     badge_notification_handler = create_notification_handler(BadgeName)
     
     try:
-        # Subscribe to notifications from the actual data characteristic
-        await client.start_notify(DATA_CHAR_UUID, badge_notification_handler)
-        print(f"✅ Successfully subscribed to notifications from {BadgeName}")
-        
-        # Read initial value
+        # Discover and choose a characteristic to subscribe to.
+        # Preference order:
+        # 1) If the known DATA_CHAR_UUID is present, use it.
+        # 2) Try any notify-capable characteristic by attempting start_notify.
+        # 3) Fallback to attempting start_notify on DATA_CHAR_UUID (original behavior).
+        # After subscribing, attempt to read an initial value (if readable) to seed the CSV.
+
+        # First check if the configured DATA_CHAR_UUID exists in discovered services
+        found = False
+        for service in services:
+            for char in service.characteristics:
+                if char.uuid.lower() == DATA_CHAR_UUID.lower():
+                    try:
+                        await client.start_notify(DATA_CHAR_UUID, badge_notification_handler)
+                        data_char_uuid = DATA_CHAR_UUID
+                        print(f"✅ Subscribed to configured DATA_CHAR_UUID {DATA_CHAR_UUID} for {BadgeName}")
+                        found = True
+                        break
+                    except Exception as e:
+                        print(f"Could not subscribe to configured DATA_CHAR_UUID {DATA_CHAR_UUID}: {e}")
+            if found:
+                break
+
+        # If not found/subscribed yet, try any notify-capable characteristic
+        if not found:
+            for service in services:
+                for char in service.characteristics:
+                    if "notify" in char.properties or "indicate" in char.properties:
+                        try:
+                            await client.start_notify(char.uuid, badge_notification_handler)
+                            data_char_uuid = char.uuid
+                            print(f"✅ Subscribed to discovered notify characteristic {data_char_uuid} for {BadgeName}")
+                            found = True
+                            break
+                        except Exception as e:
+                            print(f"Could not start_notify on {char.uuid}: {e}")
+                if found:
+                    break
+
+        # If still not subscribed, attempt the original DATA_CHAR_UUID as a last-ditch try
+        if not found:
+            try:
+                await client.start_notify(DATA_CHAR_UUID, badge_notification_handler)
+                data_char_uuid = DATA_CHAR_UUID
+                found = True
+                print(f"✅ Subscribed to default DATA_CHAR_UUID {DATA_CHAR_UUID} for {BadgeName}")
+            except Exception as e:
+                print(f"Could not subscribe to default DATA_CHAR_UUID {DATA_CHAR_UUID}: {e}")
+
+        if not found:
+            raise RuntimeError("No suitable notification characteristic found/subscribed")
+
+        # Try to read an initial value (best effort). Use the discovered characteristic if possible.
         try:
-            initial_data = await client.read_gatt_char(DATA_CHAR_UUID)
-            initial_decoded = initial_data.decode('utf-8')
-            print(f"📖 Initial reading: {initial_decoded}")
-            
-            # Save initial reading to CSV
-            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-            values = initial_decoded.split(',')
-            if len(values) == 3:
-                save_to_csv(timestamp, BadgeName, values[0].strip(), values[1].strip(), values[2].strip(), initial_decoded)
+            read_uuid = data_char_uuid if data_char_uuid else DATA_CHAR_UUID
+            try:
+                initial_data = await client.read_gatt_char(read_uuid)
+                initial_decoded = initial_data.decode('utf-8')
+                print(f"📖 Initial reading from {read_uuid}: {initial_decoded}")
+
+                # Save initial reading to CSV if it looks like comma-separated values
+                timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+                values = initial_decoded.split(',')
+                if len(values) == 3:
+                    save_to_csv(timestamp, BadgeName, values[0].strip(), values[1].strip(), values[2].strip(), initial_decoded)
+            except Exception:
+                # Some characteristics support notify but not read; that's fine.
+                pass
         except Exception as e:
             print(f"⚠️  Could not read initial value: {e}")
-        
+
         # Start input handler thread
         input_thread = threading.Thread(target=input_handler, daemon=True)
         input_thread.start()
-        
+
         print(f"� Starting continuous data collection...")
         print(f"📊 Data is being saved to: {csv_file}")
         print(f"🔄 Collecting data until you press ENTER...")
-        
+
         # Continuous collection loop
         collection_start = datetime.datetime.now()
         last_status_update = datetime.datetime.now()
         status_interval = 10  # Print status every 10 seconds
-        
+
         while not stop_collection:
             await asyncio.sleep(0.5)  # Reasonable delay to prevent busy waiting
-            
+
             # Check if still connected
             if not client.is_connected:
                 print(f"⚠️ Connection lost to {BadgeName}, attempting to reconnect...")
@@ -318,23 +374,40 @@ async def connection_run(address):
                     await client.connect(timeout=5)
                     if client.is_connected:
                         print(f"✅ Reconnected to {BadgeName}")
-                        await client.start_notify(DATA_CHAR_UUID, badge_notification_handler)
+                        # Re-subscribe to the previously determined data characteristic if available
+                        try:
+                            if 'data_char_uuid' in locals() and data_char_uuid:
+                                await client.start_notify(data_char_uuid, badge_notification_handler)
+                                print(f"🔁 Re-subscribed to {data_char_uuid} after reconnect")
+                            else:
+                                # fallback to configured constant if no discovered char present
+                                await client.start_notify(DATA_CHAR_UUID, badge_notification_handler)
+                                print(f"🔁 Re-subscribed to default DATA_CHAR_UUID after reconnect")
+                        except Exception as e:
+                            print(f"⚠️ Re-subscribe failed: {e}")
                     else:
                         print(f"❌ Failed to reconnect to {BadgeName}")
                         break
                 except Exception as e:
                     print(f"❌ Reconnection failed for {BadgeName}: {e}")
                     break
-            
+
             # Print periodic status updates
             current_time = datetime.datetime.now()
             if (current_time - last_status_update).seconds >= status_interval:
                 print(f"📊 {BadgeName}: {len(received_data)} data points collected, still running...")
                 last_status_update = current_time
         
-        # Stop notifications
-        await client.stop_notify(DATA_CHAR_UUID)
-        print(f"🛑 Stopped notifications from {BadgeName}")
+        # Stop notifications (use discovered characteristic if available)
+        try:
+            if data_char_uuid:
+                await client.stop_notify(data_char_uuid)
+                print(f"🛑 Stopped notifications from {BadgeName} on {data_char_uuid}")
+            else:
+                await client.stop_notify(DATA_CHAR_UUID)
+                print(f"🛑 Stopped notifications from {BadgeName} on default DATA_CHAR_UUID")
+        except Exception as e:
+            print(f"⚠️ Could not stop notifications cleanly: {e}")
         
         # Final summary
         collection_end = datetime.datetime.now()
