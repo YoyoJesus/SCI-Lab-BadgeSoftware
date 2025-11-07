@@ -23,12 +23,12 @@ volatile int Read; // read data
 // rssi strength
 int rssiStrength = 0;
 
-// --- GSR (Galvanic Skin Response) digital read/write configuration ---
-// By default we use a digital output pin to power the GSR sensor briefly
-// and a digital input pin to read the sensor state (HIGH/LOW).
-// If you have an analog sensor, see notes at the end of this file/comments.
-const int GSR_POWER_PIN = 7; // set to the digital pin that will supply power to the GSR circuit
-const int GSR_READ_PIN  = 6; // set to the digital pin that will read the GSR state (digitalRead)
+// --- GSR (Galvanic Skin Response) analog read configuration ---
+// We power the GSR sensor briefly using a digital output pin and read
+// the sensor voltage using an analog input. The result is scaled to 0-255
+// before being sent over BLE.
+const int GSR_POWER_PIN = 7; // digital pin that will supply power to the GSR circuit
+const int GSR_READ_PIN  = A1; // analog pin that will read the GSR voltage (analogRead)
 
 
 // last acc. data
@@ -170,17 +170,34 @@ int updateRSSI(BLEDevice _central){
 }
 
 // Read GSR value using digital power/read pins.
-// This briefly powers the sensor to save energy, then reads the digital state.
-// Returns 0 (LOW) or 1 (HIGH). Increase the delay if your sensor needs more time to settle.
+// This briefly powers the sensor to save energy, then reads the analog voltage.
+// The raw ADC reading is scaled into 0-255 (byte range) to match CSV/transport
+// expectations. The code handles common ADC widths (10-bit -> 0..1023 or
+// 12-bit -> 0..4095) by choosing a mapping that covers both.
 int updateGSR(){
   // power sensor briefly
   digitalWrite(GSR_POWER_PIN, HIGH);
   delay(5); // settle time; adjust if necessary for your sensor
-  int gsrVal = digitalRead(GSR_READ_PIN);
+
+  // Read raw analog value
+  int raw = analogRead(GSR_READ_PIN);
+
   // turn sensor power off to save energy
   digitalWrite(GSR_POWER_PIN, LOW);
 
+  // Scale raw to 0-255. Handle common ADC ranges safely.
+  int scaled;
+  if(raw <= 1023){
+    // typical 10-bit ADC (0-1023)
+    scaled = map(raw, 0, 1023, 0, 255);
+  } else {
+    // assume up to 12-bit ADC (0-4095)
+    scaled = map(raw, 0, 4095, 0, 255);
+  }
+  if(scaled < 0) scaled = 0;
+  if(scaled > 255) scaled = 255;
+
   Serial.print("GSR: ");
-  Serial.println(gsrVal);
-  return gsrVal;
+  Serial.println(scaled);
+  return scaled;
 }

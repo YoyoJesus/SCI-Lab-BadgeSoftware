@@ -19,11 +19,15 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, simpledialog
 import matplotlib.dates as mdates
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
 import json
+
+# Default sound level threshold (can be overridden in the UI prompt).
+# Values >= this threshold will be labeled 'active', below -> 'not_active'.
+SOUND_LEVEL_THRESHOLD = 65
 
 class BadgeDataProcessor:
     def __init__(self):
@@ -128,72 +132,103 @@ class BadgeDataProcessor:
         self.root = tk.Tk()
         self.root.title("Badge Data Labeling Tool")
         self.root.geometry("1200x800")
-        
+
         # Create main frame
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+
         # Instructions
-        instructions = ttk.Label(main_frame, 
-                                text="Instructions: Click and drag on the graph to select time periods, then label them as 'Active' or 'Not Active'",
-                                font=('Arial', 12))
+        instructions = ttk.Label(
+            main_frame,
+            text=("Instructions: Click and drag on the graph to select time periods, "
+                  "then label them as 'Active' or 'Not Active'"),
+            font=("Arial", 12)
+        )
         instructions.pack(pady=10)
-        
+
         # Create matplotlib figure
         self.fig, self.ax = plt.subplots(figsize=(12, 6))
         self.canvas = FigureCanvasTkAgg(self.fig, main_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
+
         # Control buttons frame
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X, pady=10)
-        
+
         # Badge selection
         ttk.Label(button_frame, text="Select Badge:").pack(side=tk.LEFT, padx=5)
         self.badge_var = tk.StringVar()
-        badge_combo = ttk.Combobox(button_frame, textvariable=self.badge_var, 
-                                  values=sorted(self.data['Badge_Name'].unique()))
+        badge_combo = ttk.Combobox(
+            button_frame,
+            textvariable=self.badge_var,
+            values=sorted(self.data['Badge_Name'].unique())
+        )
         badge_combo.pack(side=tk.LEFT, padx=5)
         badge_combo.bind('<<ComboboxSelected>>', self.update_plot)
         badge_combo.set(sorted(self.data['Badge_Name'].unique())[0])
-        
+
         # Metric selection
         ttk.Label(button_frame, text="Metric:").pack(side=tk.LEFT, padx=5)
         self.metric_var = tk.StringVar(value="Sound_Level")
-        metric_combo = ttk.Combobox(button_frame, textvariable=self.metric_var,
-                                   values=["Sound_Level", "Acceleration"])
+        metric_combo = ttk.Combobox(
+            button_frame,
+            textvariable=self.metric_var,
+            values=["Sound_Level", "Acceleration"]
+        )
         metric_combo.pack(side=tk.LEFT, padx=5)
         metric_combo.bind('<<ComboboxSelected>>', self.update_plot)
-        
+
         # Label buttons
-        ttk.Button(button_frame, text="Label as Active", 
-                  command=lambda: self.label_selection("active")).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Label as Not Active", 
-                  command=lambda: self.label_selection("not_active")).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Clear Selection", 
-                  command=self.clear_selection).pack(side=tk.LEFT, padx=5)
-        
+        ttk.Button(
+            button_frame,
+            text="Label as Active",
+            command=lambda: self.label_selection("active")
+        ).pack(side=tk.LEFT, padx=5)
+        ttk.Button(
+            button_frame,
+            text="Label as Not Active",
+            command=lambda: self.label_selection("not_active")
+        ).pack(side=tk.LEFT, padx=5)
+        ttk.Button(
+            button_frame,
+            text="Clear Selection",
+            command=self.clear_selection
+        ).pack(side=tk.LEFT, padx=5)
+
+        # Auto-label button
+        ttk.Button(
+            button_frame,
+            text="Auto-label by Sound",
+            command=self.prompt_auto_label_sound
+        ).pack(side=tk.LEFT, padx=5)
+
         # Process button
-        ttk.Button(button_frame, text="Process Data", 
-                  command=self.process_and_export).pack(side=tk.RIGHT, padx=5)
-        
+        ttk.Button(
+            button_frame,
+            text="Process Data",
+            command=self.process_and_export
+        ).pack(side=tk.RIGHT, padx=5)
+
         # Status label
-        self.status_label = ttk.Label(main_frame, text="Ready to select - click and drag on the graph to select a time period")
+        self.status_label = ttk.Label(
+            main_frame,
+            text="Ready to select - click and drag on the graph to select a time period"
+        )
         self.status_label.pack(pady=5)
-        
+
         # Selection variables
         self.selection_start = None
         self.selection_end = None
         self.selection_rect = None
-        
+
         # Bind mouse events
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('motion_notify_event', self.on_motion)
-        
+
         # Initial plot
         self.update_plot()
-        
+
         return self.root
     
     def update_plot(self, event=None):
@@ -385,6 +420,86 @@ class BadgeDataProcessor:
         # Update status
         if hasattr(self, 'status_label'):
             self.status_label.config(text="Ready to select - click and drag on the graph to select a time period")
+
+    def prompt_auto_label_sound(self):
+        """Ask user for auto-label parameters and run auto-labeling"""
+        if self.data is None:
+            messagebox.showwarning("Warning", "No data loaded to auto-label")
+            return
+        # Ask for threshold (use default constant as initial value)
+        threshold = simpledialog.askinteger(
+            "Auto-label by Sound",
+            f"Sound level threshold to mark 'active' (>= threshold = active).\nDefault: {SOUND_LEVEL_THRESHOLD}",
+            initialvalue=SOUND_LEVEL_THRESHOLD,
+            minvalue=0,
+            maxvalue=1000
+        )
+        if threshold is None:
+            return
+
+        min_dur = simpledialog.askinteger(
+            "Auto-label by Sound",
+            "Minimum contiguous duration (seconds) to consider (e.g. 2):",
+            initialvalue=2,
+            minvalue=1
+        )
+        if min_dur is None:
+            return
+
+        # Remove any previously auto-generated labels so repeated runs replace them
+        self.labels = [lbl for lbl in self.labels if lbl.get('source') != 'auto']
+
+        counts = self.auto_label_by_sound(level_threshold=threshold, min_duration_seconds=min_dur)
+        messagebox.showinfo("Auto-label Complete", f"Created {counts.get('active',0)} 'active' and {counts.get('not_active',0)} 'not_active' labels using threshold {threshold}.")
+        self.update_plot()
+
+    def auto_label_by_sound(self, level_threshold=None, min_duration_seconds=2):
+        """Auto-label contiguous periods as 'active' or 'not_active' using a fixed level threshold.
+
+        - level_threshold: numeric threshold; values >= threshold -> 'active', else 'not_active'
+        - min_duration_seconds: minimum contiguous run length to create a label
+
+        Returns a dict with counts: {'active': n, 'not_active': m}
+        """
+        if level_threshold is None:
+            level_threshold = SOUND_LEVEL_THRESHOLD
+
+        counts = {'active': 0, 'not_active': 0}
+
+        for badge in self.data['Badge_Name'].unique():
+            badge_data = self.data[self.data['Badge_Name'] == badge].sort_values('Timestamp').copy()
+            if badge_data.empty:
+                continue
+
+            # Create mask: True=active, False=not_active. Treat NaN as False.
+            mask = (badge_data['Sound_Level'].fillna(-np.inf) >= level_threshold)
+            badge_data = badge_data.assign(_mask=mask)
+
+            # Identify contiguous runs where mask value is constant
+            badge_data['_run'] = (badge_data['_mask'] != badge_data['_mask'].shift()).cumsum()
+            grouped = badge_data.groupby('_run')
+
+            for _, grp in grouped:
+                current_mask = bool(grp['_mask'].iloc[0])
+                start = grp['Timestamp'].iloc[0]
+                end = grp['Timestamp'].iloc[-1]
+                duration = (end - start).total_seconds()
+
+                if duration < min_duration_seconds:
+                    continue
+
+                label_name = 'active' if current_mask else 'not_active'
+                # Append label (ensure tz-naive) and mark as auto-generated
+                self.labels.append({
+                    'badge': badge,
+                    'start': start.replace(tzinfo=None) if hasattr(start, 'tzinfo') else start,
+                    'end': end.replace(tzinfo=None) if hasattr(end, 'tzinfo') else end,
+                    'label': label_name,
+                    'source': 'auto'
+                })
+                counts[label_name] = counts.get(label_name, 0) + 1
+
+        return counts
     
     def calculate_rolling_statistics(self, badge_data, window_seconds=20):
         """Calculate rolling statistics for sound and acceleration over time windows"""
