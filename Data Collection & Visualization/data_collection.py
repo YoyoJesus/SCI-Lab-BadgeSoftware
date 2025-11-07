@@ -60,7 +60,8 @@ def init_unified_csv_file(db_name):
     # Create CSV file with headers
     with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['Timestamp', 'Badge_Name', 'Sound_Level', 'RSSI', 'Acceleration', 'Raw_Data'])
+        # Add GR (4th numeric field) column support. Raw_Data kept for full payload.
+        writer.writerow(['Timestamp', 'Badge_Name', 'Sound_Level', 'RSSI', 'Acceleration', 'GR', 'Raw_Data'])
     
     print(f"📝 Created unified CSV file: {csv_filename}")
     return csv_filename
@@ -74,7 +75,7 @@ def ensure_unified_csv_exists(db_name):
     return csv_filename
 
 # Function to save data to CSV
-def save_to_csv(timestamp, badge_name, sound, rssi, acceleration, raw_data):
+def save_to_csv(timestamp, badge_name, sound, rssi, acceleration, raw_data, gr=None):
     """Save a single data point to unified CSV file"""
     global csv_filename
     if csv_filename:
@@ -82,7 +83,8 @@ def save_to_csv(timestamp, badge_name, sound, rssi, acceleration, raw_data):
             # Use a simple file append (Python handles concurrent access reasonably well for simple appends)
             with open(csv_filename, 'a', newline='', encoding='utf-8') as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow([timestamp, badge_name, sound, rssi, acceleration, raw_data])
+                # Write GR column if provided (empty string otherwise)
+                writer.writerow([timestamp, badge_name, sound, rssi, acceleration, gr if gr is not None else "", raw_data])
         except Exception as e:
             print(f"❌ Error saving to unified CSV: {e}")
     else:
@@ -110,34 +112,39 @@ def create_notification_handler(badge_name):
             decoded_data = data.decode('utf-8')
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]  # Include milliseconds
             
-            # Parse the data (format appears to be: "value1,value2,value3")
-            values = decoded_data.split(',')
-            if len(values) == 3:
-                sound_value = values[0].strip()
-                rssi_value = values[1].strip()
-                acc_value = values[2].strip()
-                
+            # Parse the data (format: value1,value2,value3[,value4])
+            values = [v.strip() for v in decoded_data.split(',')]
+            if len(values) >= 3:
+                sound_value = values[0]
+                rssi_value = values[1]
+                acc_value = values[2]
+                gr_value = values[3] if len(values) >= 4 else None
+
                 data_entry = {
                     'timestamp': timestamp,
                     'badge_name': badge_name,  # Use the specific badge name
                     'raw_data': decoded_data,
                     'sound': sound_value,
                     'rssi': rssi_value,
-                    'acceleration': acc_value
+                    'acceleration': acc_value,
+                    'gr': gr_value
                 }
-                
+
                 received_data.append(data_entry)
-                
-                # Save to CSV immediately
-                save_to_csv(timestamp, badge_name, sound_value, rssi_value, acc_value, decoded_data)
-                
+
+                # Save to CSV immediately (include GR if present)
+                save_to_csv(timestamp, badge_name, sound_value, rssi_value, acc_value, decoded_data, gr_value)
+
                 # Print every 10th reading to avoid spam (but save all to CSV)
                 if len(received_data) % 10 == 0:
-                    print(f"[{timestamp}] #{len(received_data)} - {badge_name}: Sound={sound_value}, RSSI={rssi_value}, Acc={acc_value}")
+                    if gr_value is not None and gr_value != "":
+                        print(f"[{timestamp}] #{len(received_data)} - {badge_name}: Sound={sound_value}, RSSI={rssi_value}, Acc={acc_value}, GR={gr_value}")
+                    else:
+                        print(f"[{timestamp}] #{len(received_data)} - {badge_name}: Sound={sound_value}, RSSI={rssi_value}, Acc={acc_value}")
             else:
                 print(f"[{timestamp}] {badge_name} Raw Data: {decoded_data}")
-                # Save raw data too
-                save_to_csv(timestamp, badge_name, "N/A", "N/A", "N/A", decoded_data)
+                # Save raw data too (leave numeric fields as N/A)
+                save_to_csv(timestamp, badge_name, "N/A", "N/A", "N/A", decoded_data, None)
                 
         except Exception as e:
             print(f"Error processing notification from {badge_name}: {e}")
@@ -342,9 +349,10 @@ async def connection_run(address):
 
                 # Save initial reading to CSV if it looks like comma-separated values
                 timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-                values = initial_decoded.split(',')
-                if len(values) == 3:
-                    save_to_csv(timestamp, BadgeName, values[0].strip(), values[1].strip(), values[2].strip(), initial_decoded)
+                values = [v.strip() for v in initial_decoded.split(',')]
+                if len(values) >= 3:
+                    gr_val = values[3] if len(values) >= 4 else None
+                    save_to_csv(timestamp, BadgeName, values[0], values[1], values[2], initial_decoded, gr_val)
             except Exception:
                 # Some characteristics support notify but not read; that's fine.
                 pass
