@@ -347,13 +347,7 @@ class BadgeDataProcessor:
             
         self.selection_end = event.xdata
         print(f"[DEBUG] Mouse release at {event.xdata}")
-        
-        # Check if we have a valid selection (minimum width)
-        if abs(self.selection_end - self.selection_start) < 0.001:  # Very small selection
-            self.clear_selection()
-            self.status_label.config(text="Selection too small - please drag to select a time range")
-            return
-        
+
         # Convert from matplotlib dates to datetime and make timezone-naive
         try:
             start_time = mdates.num2date(min(self.selection_start, self.selection_end)).replace(tzinfo=None)
