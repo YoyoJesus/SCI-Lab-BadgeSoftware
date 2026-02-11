@@ -46,6 +46,8 @@ csv_filename = None
 
 # Global mapping to store client address to badge name mapping
 client_badge_mapping = {}
+# Global mapping to store badge name to person name mapping
+badge_person_mapping = {}
 # Initialize unified CSV file for all badge data
 def init_unified_csv_file(db_name):
     """Initialize unified CSV file with headers for all badges"""
@@ -61,7 +63,7 @@ def init_unified_csv_file(db_name):
     with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
         # Add GR (4th numeric field) column support. Raw_Data kept for full payload.
-        writer.writerow(['Timestamp', 'Badge_Name', 'Sound_Level', 'RSSI', 'Acceleration', 'GR', 'Raw_Data'])
+        writer.writerow(['Timestamp', 'Badge_Name', 'Person_Name', 'Sound_Level', 'RSSI', 'Acceleration', 'GR', 'Raw_Data'])
     
     print(f"📝 Created unified CSV file: {csv_filename}")
     return csv_filename
@@ -77,14 +79,16 @@ def ensure_unified_csv_exists(db_name):
 # Function to save data to CSV
 def save_to_csv(timestamp, badge_name, sound, rssi, acceleration, raw_data, gr=None):
     """Save a single data point to unified CSV file"""
-    global csv_filename
+    global csv_filename, badge_person_mapping
     if csv_filename:
         try:
+            # Get person name from mapping, or use empty string if not set
+            person_name = badge_person_mapping.get(badge_name, "")
             # Use a simple file append (Python handles concurrent access reasonably well for simple appends)
             with open(csv_filename, 'a', newline='', encoding='utf-8') as csvfile:
                 writer = csv.writer(csvfile)
                 # Write GR column if provided (empty string otherwise)
-                writer.writerow([timestamp, badge_name, sound, rssi, acceleration, gr if gr is not None else "", raw_data])
+                writer.writerow([timestamp, badge_name, person_name, sound, rssi, acceleration, gr if gr is not None else "", raw_data])
         except Exception as e:
             print(f"❌ Error saving to unified CSV: {e}")
     else:
@@ -151,6 +155,46 @@ def create_notification_handler(badge_name):
             print(f"Raw data: {data}")
     
     return notification_handler
+
+# Function to collect person names for each badge
+def collect_person_names(detected_badges):
+    """
+    Collect person names for each detected badge
+
+    Args:
+        detected_badges: List of badge names (e.g., ['Badge01', 'Badge05'])
+
+    Returns:
+        Dictionary mapping badge names to person names
+    """
+    global badge_person_mapping
+    badge_person_mapping = {}
+
+    print("\n" + "="*50)
+    print("👤 PERSON NAME ENTRY")
+    print("="*50)
+    print("Please enter the name of the person wearing each badge.")
+    print("Press ENTER to skip if you don't want to assign a name.\n")
+
+    for badge_name in detected_badges:
+        while True:
+            person_name = input(f"Enter name for {badge_name}: ").strip()
+            if person_name:
+                badge_person_mapping[badge_name] = person_name
+                print(f"✓ {badge_name} → {person_name}\n")
+                break
+            else:
+                confirm = input(f"No name entered for {badge_name}. Continue without name? (y/n): ").strip().lower()
+                if confirm == 'y':
+                    badge_person_mapping[badge_name] = ""
+                    print(f"✓ {badge_name} → (no name)\n")
+                    break
+
+    print("="*50)
+    print("Name assignment complete!")
+    print("="*50 + "\n")
+
+    return badge_person_mapping
 
 # Function to handle user input in a separate thread
 def input_handler():
@@ -459,7 +503,7 @@ async def connection_run(address):
 
 async def main():
 
-    global detected_badge_addresses,Total_detected_device,DBName,client_badge_mapping,csv_filename
+    global detected_badge_addresses,Total_detected_device,DBName,client_badge_mapping,csv_filename,badge_person_mapping
     DBName=datetime.datetime.now().strftime('%Y%m%d_%H%M%S')  # 프로그램을 실행시키는 시간으로 테이블 생성
     
     # Initialize unified CSV file for all badges
@@ -482,12 +526,15 @@ async def main():
 
     detected_badge_localnames = [BADGE_ADDRESS[bdg] for bdg in detected_badge_addresses]  # 뱃지의 로컬이름 저장
     print(f'\nDetected Badge LocalNames : {detected_badge_localnames}')
-    
+
     if Total_detected_device == 0:
         print("No device detected : Exit program")
         return
     else:
         print(f'Try to connect to {Total_detected_device} devices')
+
+    # Collect person names for each detected badge
+    collect_person_names(detected_badge_localnames)
 
     print('DataBase Name : ',DBName)
     

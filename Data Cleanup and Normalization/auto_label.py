@@ -80,6 +80,12 @@ class AutoLabeler:
         print(f"Loaded {len(df)} rows")
         print(f"Badges detected: {df['Badge_Name'].unique()}")
 
+        # Check if Person_Name column exists, if not add it
+        if "Person_Name" not in df.columns:
+            print("\n⚠️ Person_Name column not found in data")
+            df["Person_Name"] = ""
+            self.data = df
+
     # --------------------------------------------------
     # Threshold speech presence (reuse logic)
     # --------------------------------------------------
@@ -105,6 +111,70 @@ class AutoLabeler:
 
         df["speech_present"] = df["sound_mean_short"] > sound_threshold
         return df.reset_index()
+
+    # --------------------------------------------------
+    # Collect person names if missing
+    # --------------------------------------------------
+    def collect_person_names_if_needed(self):
+        """Check if person names are missing and collect them"""
+        df = self.data
+
+        # Check which badges are missing names
+        badges_without_names = []
+        for badge_name in df["Badge_Name"].unique():
+            badge_data = df[df["Badge_Name"] == badge_name]
+            # Check if all Person_Name values are empty/null
+            if badge_data["Person_Name"].isna().all() or (badge_data["Person_Name"].str.strip() == "").all():
+                badges_without_names.append(badge_name)
+
+        if not badges_without_names:
+            print("✓ All badges have person names assigned")
+            return
+
+        print("\n" + "="*50)
+        print("👤 PERSON NAME ENTRY")
+        print("="*50)
+        print(f"The following badges don't have person names assigned:")
+        for badge in badges_without_names:
+            print(f"  - {badge}")
+        print("\nWould you like to assign names now?")
+
+        root = tk.Tk()
+        root.withdraw()
+        response = simpledialog.askstring(
+            "Assign Names",
+            "Enter 'yes' to assign names, or 'no' to skip:"
+        )
+        root.destroy()
+
+        if response and response.lower() in ['yes', 'y']:
+            badge_person_mapping = {}
+
+            for badge_name in badges_without_names:
+                root = tk.Tk()
+                root.withdraw()
+                person_name = simpledialog.askstring(
+                    "Person Name",
+                    f"Enter name for {badge_name}:"
+                )
+                root.destroy()
+
+                if person_name and person_name.strip():
+                    badge_person_mapping[badge_name] = person_name.strip()
+                    print(f"✓ {badge_name} → {person_name.strip()}")
+                else:
+                    badge_person_mapping[badge_name] = ""
+                    print(f"✓ {badge_name} → (no name)")
+
+            # Apply the names to the dataframe
+            for badge_name, person_name in badge_person_mapping.items():
+                self.data.loc[self.data["Badge_Name"] == badge_name, "Person_Name"] = person_name
+
+            print("="*50)
+            print("Name assignment complete!")
+            print("="*50 + "\n")
+        else:
+            print("Skipping name assignment\n")
 
     # --------------------------------------------------
     # Peak comparison logic
@@ -149,6 +219,9 @@ class AutoLabeler:
             return
 
         self.load_data(file_path)
+
+        # Check and collect person names if needed
+        self.collect_person_names_if_needed()
 
         df = self.compute_speech_presence(self.data)
         df = self.apply_peak_labeling(df)
