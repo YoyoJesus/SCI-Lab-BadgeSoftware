@@ -35,10 +35,10 @@ class AutoLabeler:
 
         self.time_bin_ms = 500           # peak comparison resolution
         self.speech_threshold_quantile = 0.45  # lower = more sensitive
-        self.min_speech_score = 0.3      # winner must be >= N IQR-widths above own quiet floor
-        self.high_score_fallback = 2.0   # bypass speech_present if speech_score >= this
+        self.min_speech_score = 0.75     # winner must be >= N IQR-widths above own quiet floor
+        self.high_score_fallback = 3.5   # bypass speech_present if speech_score >= this
         self.vote_window_bins = 5        # sliding window size for majority vote (bins)
-        self.min_vote_ratio = 0.35       # fraction of window bins winner must win
+        self.min_vote_ratio = 0.55       # fraction of window bins winner must win
 
         # Acceleration contribution to the combined speech score.
         # The speaker's badge vibrates physically when they talk; other badges
@@ -46,6 +46,14 @@ class AutoLabeler:
         # Set to 0.0 to disable and use sound only.
         self.accel_weight = 1.2          # relative weight vs norm_sound
         self.accel_clip = 2.5            # cap norm_accel to avoid walk/movement dominating
+        
+        # ----------------------------
+        # Post-processing parameters
+        # ----------------------------
+        self.min_active_duration_sec = 2.0    # filter out active periods shorter than this
+        self.min_inactive_duration_sec = 0.5  # filter out inactive gaps shorter than this
+        self.merge_gap_sec = 1.5              # merge active periods separated by less than this
+        self.enable_post_processing = True     # enable smoothing and filtering
 
         # ----------------------------
         # Output directory
@@ -281,6 +289,197 @@ class AutoLabeler:
         return df
 
     # --------------------------------------------------
+    # Speaker-level label: who speaks in each time bin
+    # --------------------------------------------------
+    def add_speaker_column(self, df):
+        """Add auto_speaker column: which badge is speaking per time bin, or 'no_speaker'."""
+        df = df.copy()
+        if "time_bin" not in df.columns:
+            df["time_bin"] = df["Timestamp"].dt.floor(f"{self.time_bin_ms}ms")
+
+        bin_speakers = {}
+        for time_bin, group in df.groupby("time_bin"):
+            active = group[group["auto_activity_label"] == "active"]["Badge_Name"].unique().tolist()
+            if len(active) == 0:
+                bin_speakers[time_bin] = "no_speaker"
+            elif len(active) == 1:
+                bin_speakers[time_bin] = active[0]
+            else:
+                # Multiple active in a bin — pick highest speech_score if available
+                active_group = group[group["auto_activity_label"] == "active"]
+                if "speech_score" in active_group.columns:
+                    bin_speakers[time_bin] = active_group.loc[
+                        active_group["speech_score"].idxmax(), "Badge_Name"
+                    ]
+                else:
+                    bin_speakers[time_bin] = sorted(active)[0]
+
+        df["auto_speaker"] = df["time_bin"].map(bin_speakers)
+        return df
+
+    # --------------------------------------------------
+    # Post-processing: merge and filter labels
+    # --------------------------------------------------
+    def post_process_labels(self, df):
+        """Apply smoothing and filtering to reduce fragmentation"""
+        if not self.enable_post_processing:
+            return df
+        
+        print("\nApplying post-processing...")
+        results = []
+        
+        for badge_name, badge_df in df.groupby("Badge_Name"):
+            badge_df = badge_df.sort_values("Timestamp").copy()
+            
+            # Step 1: Identify contiguous active/inactive runs
+            badge_df['label_changed'] = (badge_df['auto_activity_label'] != 
+                                         badge_df['auto_activity_label'].shift()).astype(int)
+            badge_df['run_id'] = badge_df['label_changed'].cumsum()
+            
+            # Step 2: Calculate duration of each run
+            runs = []
+            for run_id, run_df in badge_df.groupby('run_id'):
+                start_time = run_df['Timestamp'].iloc[0]
+                end_time = run_df['Timestamp'].iloc[-1]
+                duration = (end_time - start_time).total_seconds()
+                label = run_df['auto_activity_label'].iloc[0]
+                runs.append({
+                    'run_id': run_id,
+                    'start': start_time,
+                    'end': end_time,
+                    'duration': duration,
+                    'label': label,
+                    'indices': run_df.index.tolist()
+                })
+            
+            # Step 3: Filter out short active periods
+            for i, run in enumerate(runs):
+                if run['label'] == 'active' and run['duration'] < self.min_active_duration_sec:
+                    # Mark this run as not_active
+                    badge_df.loc[run['indices'], 'auto_activity_label'] = 'not_active'
+            
+            # Step 4: Merge active periods separated by short gaps
+            i = 0
+            while i < len(runs) - 2:
+                current = runs[i]
+                gap = runs[i + 1]
+                next_run = runs[i + 2]
+                
+                if (current['label'] == 'active' and 
+                    gap['label'] == 'not_active' and 
+                    next_run['label'] == 'active' and
+                    gap['duration'] < self.merge_gap_sec):
+                    # Fill the gap - mark it as active
+                    badge_df.loc[gap['indices'], 'auto_activity_label'] = 'active'
+                    i += 3  # Skip past the merged section
+                else:
+                    i += 1
+            
+            # Step 5: Fill short inactive gaps between active periods
+            badge_df['label_changed'] = (badge_df['auto_activity_label'] != 
+                                         badge_df['auto_activity_label'].shift()).astype(int)
+            badge_df['run_id'] = badge_df['label_changed'].cumsum()
+            
+            for run_id, run_df in badge_df.groupby('run_id'):
+                if run_df['auto_activity_label'].iloc[0] == 'not_active':
+                    duration = (run_df['Timestamp'].iloc[-1] - run_df['Timestamp'].iloc[0]).total_seconds()
+                    if duration < self.min_inactive_duration_sec:
+                        # Check if surrounded by active periods
+                        prev_idx = run_df.index[0] - 1
+                        next_idx = run_df.index[-1] + 1
+                        if (prev_idx in badge_df.index and next_idx in badge_df.index):
+                            if (badge_df.loc[prev_idx, 'auto_activity_label'] == 'active' and
+                                badge_df.loc[next_idx, 'auto_activity_label'] == 'active'):
+                                badge_df.loc[run_df.index, 'auto_activity_label'] = 'active'
+            
+            # Clean up temporary columns
+            badge_df = badge_df.drop(columns=['label_changed', 'run_id'], errors='ignore')
+            results.append(badge_df)
+        
+        result_df = pd.concat(results).sort_values(['Timestamp', 'Badge_Name']).reset_index(drop=True)
+        print("Post-processing complete")
+        return result_df
+    
+    # --------------------------------------------------
+    # Ask user for parameter tuning
+    # --------------------------------------------------
+    def get_user_parameters(self):
+        """Prompt user to adjust key parameters"""
+        root = tk.Tk()
+        root.withdraw()
+        
+        # Ask if user wants to customize parameters
+        customize = simpledialog.askstring(
+            "Parameter Configuration",
+            "Use default parameters? (yes/no)\n\nDefault settings:\n"
+            f"  - Speech threshold quantile: {self.speech_threshold_quantile}\n"
+            f"  - Min speech score: {self.min_speech_score}  (raised from 0.3)\n"
+            f"  - High score fallback: {self.high_score_fallback}  (raised from 2.0)\n"
+            f"  - Min vote ratio: {self.min_vote_ratio}  (raised from 0.35)\n"
+            f"  - Acceleration weight: {self.accel_weight}\n"
+            f"  - Min active duration: {self.min_active_duration_sec}s  (raised from 1.0s)\n"
+            f"  - Merge gap: {self.merge_gap_sec}s"
+        )
+        
+        if customize and customize.lower() in ['no', 'n']:
+            # Speech threshold quantile
+            val = simpledialog.askfloat(
+                "Speech Threshold",
+                f"Speech threshold quantile (0.0-1.0)\nLower = more sensitive\nCurrent: {self.speech_threshold_quantile}",
+                initialvalue=self.speech_threshold_quantile,
+                minvalue=0.0,
+                maxvalue=1.0
+            )
+            if val is not None:
+                self.speech_threshold_quantile = val
+            
+            # Min speech score
+            val = simpledialog.askfloat(
+                "Minimum Speech Score",
+                f"Minimum speech score (IQR-widths above baseline)\nCurrent: {self.min_speech_score}",
+                initialvalue=self.min_speech_score,
+                minvalue=0.0,
+                maxvalue=5.0
+            )
+            if val is not None:
+                self.min_speech_score = val
+            
+            # Acceleration weight
+            val = simpledialog.askfloat(
+                "Acceleration Weight",
+                f"Acceleration weight\nHigher = more emphasis on motion\nCurrent: {self.accel_weight}",
+                initialvalue=self.accel_weight,
+                minvalue=0.0,
+                maxvalue=5.0
+            )
+            if val is not None:
+                self.accel_weight = val
+            
+            # Min active duration
+            val = simpledialog.askfloat(
+                "Minimum Active Duration",
+                f"Minimum active period duration (seconds)\nCurrent: {self.min_active_duration_sec}",
+                initialvalue=self.min_active_duration_sec,
+                minvalue=0.0,
+                maxvalue=10.0
+            )
+            if val is not None:
+                self.min_active_duration_sec = val
+            
+            # Merge gap
+            val = simpledialog.askfloat(
+                "Merge Gap",
+                f"Maximum gap to merge active periods (seconds)\nCurrent: {self.merge_gap_sec}",
+                initialvalue=self.merge_gap_sec,
+                minvalue=0.0,
+                maxvalue=5.0
+            )
+            if val is not None:
+                self.merge_gap_sec = val
+        
+        root.destroy()
+    
+    # --------------------------------------------------
     # Main process
     # --------------------------------------------------
     def process(self):
@@ -293,9 +492,18 @@ class AutoLabeler:
 
         # Check and collect person names if needed
         self.collect_person_names_if_needed()
+        
+        # Get user parameters
+        self.get_user_parameters()
 
         df = self.compute_speech_presence(self.data)
         df = self.apply_peak_labeling(df)
+        
+        # Apply post-processing to smooth and filter labels
+        df = self.post_process_labels(df)
+
+        # Add per-time-bin speaker column (badge name or 'no_speaker')
+        df = self.add_speaker_column(df)
 
         # Prompt for output name
         root = tk.Tk()
@@ -314,8 +522,25 @@ class AutoLabeler:
 
         print("\n=== Auto Labeling Complete ===")
         print(f"Output saved to: {output_path}")
-        print("Label counts:")
+        print("\nOverall label counts:")
         print(df["auto_activity_label"].value_counts())
+        
+        print("\nPer-badge label counts:")
+        for badge, badge_df in df.groupby('Badge_Name'):
+            active_count = (badge_df['auto_activity_label'] == 'active').sum()
+            total_count = len(badge_df)
+            pct = (active_count / total_count * 100) if total_count > 0 else 0
+            person = badge_df['Person_Name'].iloc[0] if 'Person_Name' in badge_df.columns else ''
+            name_display = f" ({person})" if person else ""
+            print(f"  {badge}{name_display}: {active_count:,}/{total_count:,} ({pct:.1f}% active)")
+        
+        print("\nParameters used:")
+        print(f"  Speech threshold quantile: {self.speech_threshold_quantile}")
+        print(f"  Min speech score: {self.min_speech_score}")
+        print(f"  Acceleration weight: {self.accel_weight}")
+        print(f"  Min active duration: {self.min_active_duration_sec}s")
+        print(f"  Min inactive duration: {self.min_inactive_duration_sec}s")
+        print(f"  Merge gap: {self.merge_gap_sec}s")
 
 
 # --------------------------------------------------

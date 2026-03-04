@@ -21,6 +21,10 @@ from pathlib import Path
 from datetime import datetime
 import tkinter as tk
 from tkinter import filedialog
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 # --------------------------------------------------
@@ -49,6 +53,136 @@ def normalize_label(val):
     if val == "active":
         return "active"
     return "not_active"
+
+
+# --------------------------------------------------
+# Speaker-state helpers
+# --------------------------------------------------
+def compute_speaker_states(merged_df, time_bin_ms=500):
+    """
+    Convert per-badge labels to a per-time-bin speaker state.
+
+    For each time bin:
+      - manual_speaker : badge with the most active samples in the bin
+                         (ties broken alphabetically); 'no_speaker' if none active
+      - auto_speaker   : same logic for auto labels
+
+    Overlap bins (multiple manually-active badges) are resolved by sample count
+    rather than skipped, so no data is lost.
+    """
+    df = merged_df.copy()
+    df["time_bin"] = pd.to_datetime(df["Timestamp"]).dt.floor(f"{time_bin_ms}ms")
+
+    rows = []
+    overlap_count = 0
+    for time_bin, group in df.groupby("time_bin"):
+        manual_active = group[group["manual_label"] == "active"]["Badge_Name"].unique().tolist()
+        auto_active   = group[group["auto_label"]   == "active"]["Badge_Name"].unique().tolist()
+
+        if len(manual_active) == 0:
+            manual_speaker = "no_speaker"
+        elif len(manual_active) == 1:
+            manual_speaker = manual_active[0]
+        else:
+            # Overlap: pick badge with the most active samples in this bin
+            overlap_count += 1
+            counts = group[group["manual_label"] == "active"].groupby("Badge_Name").size()
+            manual_speaker = counts.idxmax()
+
+        if len(auto_active) == 0:
+            auto_speaker = "no_speaker"
+        elif len(auto_active) == 1:
+            auto_speaker = auto_active[0]
+        else:
+            counts = group[group["auto_label"] == "active"].groupby("Badge_Name").size()
+            auto_speaker = counts.idxmax()
+
+        rows.append({"time_bin": time_bin, "manual_speaker": manual_speaker,
+                     "auto_speaker": auto_speaker, "overlap": overlap_count > 0})
+
+    result = pd.DataFrame(rows)
+    result.attrs["overlap_bins"] = overlap_count
+    return result
+
+
+def build_speaker_cm(speaker_df, classes):
+    """Build an (N x N) confusion matrix from speaker_df."""
+    n = len(classes)
+    idx = {c: i for i, c in enumerate(classes)}
+    cm = np.zeros((n, n), dtype=int)
+    for _, row in speaker_df.iterrows():
+        m, a = row["manual_speaker"], row["auto_speaker"]
+        if m in idx and a in idx:
+            cm[idx[m], idx[a]] += 1
+    return cm
+
+
+def compute_multiclass_metrics(cm, classes):
+    """
+    Compute per-class TP/FP/FN/TN and precision/recall/F1 from an (N x N) cm.
+    Also returns overall (speaker-state) accuracy.
+    """
+    total = int(cm.sum())
+    overall_accuracy = cm.diagonal().sum() / total if total > 0 else 0.0
+
+    per_class = {}
+    for i, cls in enumerate(classes):
+        tp = int(cm[i, i])
+        fp = int(cm[:, i].sum()) - tp   # predicted as C but isn't C
+        fn = int(cm[i, :].sum()) - tp   # actually C but predicted as something else
+        tn = total - tp - fp - fn
+        precision  = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall     = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1         = (2 * precision * recall / (precision + recall)
+                      if (precision + recall) > 0 else 0.0)
+        per_class[cls] = dict(TP=tp, FP=fp, FN=fn, TN=tn,
+                              precision=precision, recall=recall, f1=f1)
+
+    return overall_accuracy, per_class
+
+
+def plot_comparison_grid(cm, labels, output_path, title="Badge Label Comparison"):
+    """
+    Plot an (N+1) x (N+1) confusion matrix (raw counts + row-normalised).
+
+    cm     : numpy int array of shape (N, N) from build_speaker_cm
+    labels : display labels in the same order as the cm rows/columns
+    """
+    n = len(labels)
+    row_sums = cm.sum(axis=1, keepdims=True)
+    row_sums[row_sums == 0] = 1
+    cm_pct = cm / row_sums
+
+    fig, axes = plt.subplots(1, 2, figsize=(max(14, n * 2), max(6, n * 1.4)))
+    fig.suptitle(title, fontsize=13, fontweight="bold")
+
+    for ax, data, fmt_fn, subtitle in [
+        (axes[0], cm,     lambda v: str(v),      "Raw counts"),
+        (axes[1], cm_pct, lambda v: f"{v:.0%}",  "Normalised (% of ground truth)"),
+    ]:
+        im = ax.imshow(data, cmap="Blues", aspect="auto",
+                       vmin=0, vmax=(None if data is cm else 1))
+        ax.set_xticks(range(n))
+        ax.set_yticks(range(n))
+        ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=9)
+        ax.set_yticklabels(labels, fontsize=9)
+        ax.set_xlabel("Auto-Labeled Speaker", fontsize=11)
+        ax.set_ylabel("Manual Speaker (Ground Truth)", fontsize=11)
+        ax.set_title(subtitle, fontsize=10)
+
+        threshold = data.max() * 0.55
+        for i in range(n):
+            for j in range(n):
+                color = "white" if data[i, j] > threshold else "black"
+                ax.text(j, i, fmt_fn(data[i, j]),
+                        ha="center", va="center", color=color, fontsize=8)
+
+        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Chart saved to: {output_path}")
 
 
 # --------------------------------------------------
@@ -162,6 +296,20 @@ def main():
 
     merged["label_match"] = merged["manual_label"] == merged["auto_label"]
 
+    # --------------------------------------------------
+    # Speaker-state pre-computation (reused throughout)
+    # --------------------------------------------------
+    speaker_df = compute_speaker_states(merged)
+    badges_sorted = sorted(merged["Badge_Name"].unique().tolist())
+    person_name_map = {
+        row["Badge_Name"]: row["Person_Name"]
+        for _, row in merged[["Badge_Name", "Person_Name"]].drop_duplicates().iterrows()
+        if pd.notna(row["Person_Name"]) and str(row["Person_Name"]).strip()
+    }
+    classes = badges_sorted + ["no_speaker"]
+    speaker_cm = build_speaker_cm(speaker_df, classes)
+    speaker_acc, speaker_class_metrics = compute_multiclass_metrics(speaker_cm, classes)
+
     # Report name merging results
     if has_auto_names and not has_manual_names:
         print("✓ Copied person names from auto-labeled data to comparison output")
@@ -223,6 +371,21 @@ def main():
         rec = tp / (tp + fn) if (tp + fn) else 0
         spec = tn / (tn + fp) if (tn + fp) else 0
 
+        # No-speaker 3-class breakdown (per 500 ms bin from speaker_df)
+        # For badge B: active / not_active (other speaking) / no_speaker
+        sbins = speaker_df.copy()
+        sbins["mc_manual"] = sbins["manual_speaker"].apply(
+            lambda x: "active" if x == badge_name else ("no_speaker" if x == "no_speaker" else "not_active"))
+        sbins["mc_auto"] = sbins["auto_speaker"].apply(
+            lambda x: "active" if x == badge_name else ("no_speaker" if x == "no_speaker" else "not_active"))
+
+        tn_other   = int(((sbins["mc_manual"] == "not_active") & (sbins["mc_auto"] == "not_active")).sum())
+        tn_nsp     = int(((sbins["mc_manual"] == "no_speaker") & (sbins["mc_auto"] == "no_speaker")).sum())
+        ns_fp      = int(((sbins["mc_manual"] == "no_speaker") & (sbins["mc_auto"] == "active")).sum())
+        fn_as_nsp  = int(((sbins["mc_manual"] == "active")     & (sbins["mc_auto"] == "no_speaker")).sum())
+        total_bins = len(sbins)
+        bin_acc    = int((sbins["mc_manual"] == sbins["mc_auto"]).sum()) / total_bins if total_bins else 0
+
         per_badge_metrics[badge_name] = {
             "person_name": person_name,
             "total_samples": total,
@@ -233,7 +396,14 @@ def main():
             "accuracy": acc,
             "precision": prec,
             "recall": rec,
-            "specificity": spec
+            "specificity": spec,
+            # No-speaker breakdown
+            "TN_other_speaking": tn_other,
+            "TN_no_speaker": tn_nsp,
+            "NS_FP": ns_fp,
+            "FN_as_no_speaker": fn_as_nsp,
+            "bin_accuracy_3class": bin_acc,
+            "total_bins": total_bins,
         }
 
     # --------------------------------------------------
@@ -300,13 +470,11 @@ Person Names:
 - Manual file had names: {has_manual_names}
 - Auto file had names: {has_auto_names}
 
-OVERALL Confusion Matrix (Manual = Ground Truth):
-- True Positives (TP): {TP}
-- True Negatives (TN): {TN}
-- False Positives (FP): {FP}
-- False Negatives (FN): {FN}
+PRIMARY Metric - Speaker-State Accuracy (per 500ms bin, N+1 classes incl. no_speaker):
+- Accuracy: {speaker_acc:.4f}  ({int(speaker_cm.diagonal().sum())} / {int(speaker_cm.sum())} bins correct)
 
-OVERALL Metrics:
+Reference - Binary Per-Sample Metrics (active vs not_active, no_speaker collapsed into TN):
+- Confusion: TP={TP}  TN={TN}  FP={FP}  FN={FN}
 - Accuracy:    {accuracy:.4f}
 - Precision:   {precision:.4f}
 - Recall:      {recall:.4f}
@@ -337,15 +505,16 @@ Total Badges: {total_badges}
 {'='*60}
 {header}
 {'='*60}
+PRIMARY - 3-Class Accuracy (active / not_active / no_speaker, per 500ms bin):
+- Accuracy: {metrics['bin_accuracy_3class']:.4f}  (over {metrics['total_bins']} bins)
+- TN (other badge speaking):   {metrics['TN_other_speaking']:6d}
+- TN (no speaker):             {metrics['TN_no_speaker']:6d}
+- FP (no_speaker -> active):   {metrics['NS_FP']:6d}  (auto falsely activates during silence)
+- FN (active -> no_speaker):   {metrics['FN_as_no_speaker']:6d}  (auto misses speech, calls it silence)
+
+Reference - Binary Per-Sample (active vs not_active, no_speaker collapsed into TN):
 Total Samples: {metrics['total_samples']}
-
-Confusion Matrix:
-- True Positives (TP):  {metrics['TP']:4d}
-- True Negatives (TN):  {metrics['TN']:4d}
-- False Positives (FP): {metrics['FP']:4d}
-- False Negatives (FN): {metrics['FN']:4d}
-
-Metrics:
+- TP: {metrics['TP']:6d}  TN: {metrics['TN']:6d}  FP: {metrics['FP']:6d}  FN: {metrics['FN']:6d}
 - Accuracy:    {metrics['accuracy']:.4f}
 - Precision:   {metrics['precision']:.4f}
 - Recall:      {metrics['recall']:.4f}
@@ -381,9 +550,62 @@ Files created:
     with open(log_out, "w") as f:
         f.write(log_output)
 
+    # --------------------------------------------------
+    # Multi-class speaker-state analysis (N badges + no_speaker)
+    # --------------------------------------------------
+    print("\nGenerating speaker-state confusion matrix...")
+    overlap_bins = speaker_df.attrs.get("overlap_bins", 0)
+
+    labels = [f"{b}\n({person_name_map.get(b, '')})" if person_name_map.get(b) else b
+              for b in badges_sorted] + ["no_speaker"]
+
+    # Build speaker-state summary text
+    speaker_summary = f"""
+Speaker-State Confusion Matrix (N badges + no_speaker)
+======================================================
+Total 500 ms bins analysed: {len(speaker_df)}
+Overlap bins resolved (primary speaker by sample count): {overlap_bins}
+Overall speaker-state accuracy: {speaker_acc:.4f}
+
+Per-class metrics:
+{'Class':<20} {'TP':>6} {'FP':>6} {'FN':>6} {'TN':>7}  {'Prec':>6} {'Rec':>6} {'F1':>6}
+{'-'*72}"""
+
+    for cls in classes:
+        m = speaker_class_metrics[cls]
+        display = f"{cls} ({person_name_map.get(cls, '')})" if person_name_map.get(cls) else cls
+        speaker_summary += (
+            f"\n{display:<20} {m['TP']:>6} {m['FP']:>6} {m['FN']:>6} {m['TN']:>7}"
+            f"  {m['precision']:>6.3f} {m['recall']:>6.3f} {m['f1']:>6.3f}"
+        )
+
+    speaker_summary += "\n"
+
+    # Save speaker-state metrics CSV
+    speaker_metrics_df = pd.DataFrame([
+        {"class": cls, **speaker_class_metrics[cls]} for cls in classes
+    ])
+    speaker_metrics_csv = run_dir / f"speaker_state_metrics_{timestamp}.csv"
+    speaker_metrics_df.to_csv(speaker_metrics_csv, index=False)
+
+    # Append to summary file
+    with open(summary_out, "a") as f:
+        f.write(speaker_summary)
+
+    # Chart
+    chart_path = run_dir / f"badge_comparison_chart_{timestamp}.png"
+    n = len(badges_sorted)
+    plot_comparison_grid(
+        speaker_cm, labels, chart_path,
+        title=f"Badge Speaker Comparison - {n} badges ({n+1}x{n+1})\n"
+              f"{manual_file.name}  vs  {auto_file.name}"
+    )
+
     # Print to console
     print(log_output)
+    print(speaker_summary)
     print(f"\n💾 Complete log saved to: {log_out.name}")
+    print(f"📊 Chart saved to: {chart_path.name}")
 
 
 # --------------------------------------------------

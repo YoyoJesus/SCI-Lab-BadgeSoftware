@@ -4,12 +4,22 @@ Badge Data Processing Tool
 
 This script processes badge data files and:
 1. Allows user to label time periods as 'active' or 'not active'
-2. Splits data by badge name
+2. Splits data by badge name  
 3. Labels individual data points based on time period selections
 4. Exports processed data to CSV for AI tools
 
+Features:
+- Interactive graph-based labeling with zoom/pan controls
+- Batch labeling: apply same label to all badges
+- Keyboard shortcuts: A=Active, N=Not Active, Delete=Remove label
+- Right-click to delete labels
+- Label manager to view and manage all labels
+- Person name display (when available in data)
+- Auto-labeling using sound + acceleration (weighted combination, sound prioritized)
+
 Author: Badge Data Processing Tool
 Date: October 2025
+Updated: February 2026
 """
 
 import pandas as pd
@@ -21,13 +31,14 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 import matplotlib.dates as mdates
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.patches import Rectangle
 import json
 
-# Default sound level threshold (can be overridden in the UI prompt).
-# Values >= this threshold will be labeled 'active', below -> 'not_active'.
-SOUND_LEVEL_THRESHOLD = 65
+# Default thresholds for auto-labeling (can be overridden in the UI prompt).
+SOUND_LEVEL_THRESHOLD = 65  # Sound level threshold for 'active' classification
+ACCELERATION_THRESHOLD = 0.5 # Acceleration threshold for 'active' classification  
+SOUND_WEIGHT = 0.7  # Default weight for sound (70% sound, 30% acceleration)
 
 class BadgeDataProcessor:
     def __init__(self):
@@ -36,6 +47,8 @@ class BadgeDataProcessor:
         self.labels = []  # Store time periods and their labels
         self.output_folder = Path("processed_data")
         self.output_folder.mkdir(exist_ok=True)
+        self.badge_to_person = {}  # Map Badge_Name to Person_Name
+        self.has_person_names = False  # Flag if Person_Name column exists
         
         # GUI components
         self.root = None
@@ -117,9 +130,22 @@ class BadgeDataProcessor:
             self.data = self.data.drop_duplicates()
             removed_count = initial_count - len(self.data)
             
+            # Check if Person_Name column exists and create mapping
+            if 'Person_Name' in self.data.columns:
+                self.has_person_names = True
+                # Create mapping from Badge_Name to Person_Name
+                for badge_name in self.data['Badge_Name'].unique():
+                    person_name = self.data[self.data['Badge_Name'] == badge_name]['Person_Name'].iloc[0]
+                    self.badge_to_person[badge_name] = person_name
+            
             print(f"Loaded {len(self.data)} data points ({removed_count} duplicates removed)")
             print(f"Time range: {self.data['Timestamp'].min()} to {self.data['Timestamp'].max()}")
-            print(f"Badges found: {sorted(self.data['Badge_Name'].unique())}")
+            
+            if self.has_person_names:
+                badge_info = [f"{badge} ({self.badge_to_person[badge]})" for badge in sorted(self.data['Badge_Name'].unique())]
+                print(f"Badges found: {', '.join(badge_info)}")
+            else:
+                print(f"Badges found: {sorted(self.data['Badge_Name'].unique())}")
             
             return True
             
@@ -150,6 +176,12 @@ class BadgeDataProcessor:
         self.fig, self.ax = plt.subplots(figsize=(12, 6))
         self.canvas = FigureCanvasTkAgg(self.fig, main_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # Add navigation toolbar for zoom/pan
+        toolbar_frame = ttk.Frame(main_frame)
+        toolbar_frame.pack(fill=tk.X)
+        toolbar = NavigationToolbar2Tk(self.canvas, toolbar_frame)
+        toolbar.update()
 
         # Control buttons frame
         button_frame = ttk.Frame(main_frame)
@@ -158,14 +190,22 @@ class BadgeDataProcessor:
         # Badge selection
         ttk.Label(button_frame, text="Select Badge:").pack(side=tk.LEFT, padx=5)
         self.badge_var = tk.StringVar()
+        
+        # Create badge display options with person names if available
+        if self.has_person_names:
+            badge_options = [f"{badge} - {self.badge_to_person[badge]}" for badge in sorted(self.data['Badge_Name'].unique())]
+        else:
+            badge_options = sorted(self.data['Badge_Name'].unique())
+        
         badge_combo = ttk.Combobox(
             button_frame,
             textvariable=self.badge_var,
-            values=sorted(self.data['Badge_Name'].unique())
+            values=badge_options,
+            width=25
         )
         badge_combo.pack(side=tk.LEFT, padx=5)
         badge_combo.bind('<<ComboboxSelected>>', self.update_plot)
-        badge_combo.set(sorted(self.data['Badge_Name'].unique())[0])
+        badge_combo.set(badge_options[0])
 
         # Metric selection
         ttk.Label(button_frame, text="Metric:").pack(side=tk.LEFT, padx=5)
@@ -194,12 +234,27 @@ class BadgeDataProcessor:
             text="Clear Selection",
             command=self.clear_selection
         ).pack(side=tk.LEFT, padx=5)
+        
+        # Batch labeling option
+        self.apply_to_all_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            button_frame,
+            text="Apply to all badges",
+            variable=self.apply_to_all_var
+        ).pack(side=tk.LEFT, padx=5)
 
         # Auto-label button
         ttk.Button(
             button_frame,
-            text="Auto-label by Sound",
-            command=self.prompt_auto_label_sound
+            text="Auto-label (Sound+Motion)",
+            command=self.prompt_auto_label
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # View labels button
+        ttk.Button(
+            button_frame,
+            text="View All Labels",
+            command=self.show_label_manager
         ).pack(side=tk.LEFT, padx=5)
 
         # Process button
@@ -212,9 +267,17 @@ class BadgeDataProcessor:
         # Status label
         self.status_label = ttk.Label(
             main_frame,
-            text="Ready to select - click and drag on the graph to select a time period"
+            text="Ready to select - click and drag to select | Shortcuts: A=Active, N=Not Active, Delete=Remove label under cursor"
         )
         self.status_label.pack(pady=5)
+        
+        # Label count display
+        self.label_count_label = ttk.Label(
+            main_frame,
+            text="Labels: 0",
+            font=('Arial', 10, 'bold')
+        )
+        self.label_count_label.pack(pady=2)
 
         # Selection variables
         self.selection_start = None
@@ -225,6 +288,16 @@ class BadgeDataProcessor:
         self.canvas.mpl_connect('button_press_event', self.on_press)
         self.canvas.mpl_connect('button_release_event', self.on_release)
         self.canvas.mpl_connect('motion_notify_event', self.on_motion)
+        
+        # Bind keyboard shortcuts
+        self.root.bind('<a>', lambda e: self.label_selection("active"))
+        self.root.bind('<n>', lambda e: self.label_selection("not_active"))
+        self.root.bind('<Escape>', lambda e: self.clear_selection())
+        self.root.bind('<Delete>', lambda e: self.delete_label_at_cursor())
+        
+        # Track cursor position for label interaction
+        self.canvas.mpl_connect('motion_notify_event', self.track_cursor_position)
+        self.cursor_time = None
 
         # Initial plot
         self.update_plot()
@@ -233,11 +306,14 @@ class BadgeDataProcessor:
     
     def update_plot(self, event=None):
         """Update the plot based on selected badge and metric"""
-        badge_name = self.badge_var.get()
+        badge_display = self.badge_var.get()
         metric = self.metric_var.get()
         
-        if not badge_name or not metric:
+        if not badge_display or not metric:
             return
+        
+        # Extract actual badge name from display string (e.g., "Badge10 - Andrew" -> "Badge10")
+        badge_name = badge_display.split(' - ')[0] if ' - ' in badge_display else badge_display
         
         # Filter data for selected badge
         badge_data = self.data[self.data['Badge_Name'] == badge_name].copy()
@@ -250,9 +326,15 @@ class BadgeDataProcessor:
         # Draw existing labels
         self.draw_existing_labels()
         
+        # Create title with person name if available
+        if self.has_person_names and badge_name in self.badge_to_person:
+            title = f'{badge_name} - {self.badge_to_person[badge_name]} - {metric}'
+        else:
+            title = f'{badge_name} - {metric}'
+        
         self.ax.set_xlabel('Time')
         self.ax.set_ylabel(metric)
-        self.ax.set_title(f'{badge_name} - {metric}')
+        self.ax.set_title(title)
         self.ax.grid(True, alpha=0.3)
         
         # Format x-axis
@@ -265,23 +347,41 @@ class BadgeDataProcessor:
     
     def draw_existing_labels(self):
         """Draw existing labels on the plot"""
-        for label in self.labels:
-            if label['badge'] == self.badge_var.get():
+        # Extract actual badge name from display string
+        badge_display = self.badge_var.get()
+        badge_name = badge_display.split(' - ')[0] if ' - ' in badge_display else badge_display
+        
+        for i, label in enumerate(self.labels):
+            if label['badge'] == badge_name:
                 color = 'green' if label['label'] == 'active' else 'red'
                 rect = Rectangle((mdates.date2num(label['start']), self.ax.get_ylim()[0]),
                                mdates.date2num(label['end']) - mdates.date2num(label['start']),
                                self.ax.get_ylim()[1] - self.ax.get_ylim()[0],
-                               alpha=0.3, facecolor=color)
+                               alpha=0.3, facecolor=color, edgecolor='darkgray', linewidth=1.5)
+                rect.label_index = i  # Store label index for deletion
                 self.ax.add_patch(rect)
+        
+        # Update label count
+        if hasattr(self, 'label_count_label'):
+            badge_label_count = sum(1 for lbl in self.labels if lbl['badge'] == badge_name)
+            self.label_count_label.config(text=f"Labels: {len(self.labels)} total ({badge_label_count} on current badge)")
     
     def on_press(self, event):
         """Handle mouse press for selection"""
         if event.inaxes != self.ax:
             return
-        # Clear any existing selection first
-        self.clear_selection()
-        self.selection_start = event.xdata
-        print(f"[DEBUG] Mouse press at {event.xdata}")
+        
+        # Right-click to delete label
+        if event.button == 3:  # Right mouse button
+            self.delete_label_at_position(event.xdata)
+            return
+        
+        # Left-click for selection
+        if event.button == 1:
+            # Clear any existing selection first
+            self.clear_selection()
+            self.selection_start = event.xdata
+            print(f"[DEBUG] Mouse press at {event.xdata}")
         
     def on_motion(self, event):
         """Handle mouse motion for selection"""
@@ -297,11 +397,14 @@ class BadgeDataProcessor:
     def update_plot_with_selection(self):
         """Update the plot and show current selection"""
         # Get current selections
-        badge_name = self.badge_var.get()
+        badge_display = self.badge_var.get()
         metric = self.metric_var.get()
         
-        if not badge_name or not metric:
+        if not badge_display or not metric:
             return
+        
+        # Extract actual badge name from display string
+        badge_name = badge_display.split(' - ')[0] if ' - ' in badge_display else badge_display
         
         # Filter data for selected badge
         badge_data = self.data[self.data['Badge_Name'] == badge_name].copy()
@@ -326,9 +429,15 @@ class BadgeDataProcessor:
                                alpha=0.2, facecolor='blue')
                 self.ax.add_patch(rect)
         
+        # Create title with person name if available
+        if self.has_person_names and badge_name in self.badge_to_person:
+            title = f'{badge_name} - {self.badge_to_person[badge_name]} - {metric}'
+        else:
+            title = f'{badge_name} - {metric}'
+        
         self.ax.set_xlabel('Time')
         self.ax.set_ylabel(metric)
-        self.ax.set_title(f'{badge_name} - {metric}')
+        self.ax.set_title(title)
         self.ax.grid(True, alpha=0.3)
         
         # Format x-axis
@@ -374,16 +483,32 @@ class BadgeDataProcessor:
             start_time = mdates.num2date(min(self.final_selection_start, self.final_selection_end)).replace(tzinfo=None)
             end_time = mdates.num2date(max(self.final_selection_start, self.final_selection_end)).replace(tzinfo=None)
             
-            # Add label
-            self.labels.append({
-                'badge': self.badge_var.get(),
-                'start': start_time,
-                'end': end_time,
-                'label': label
-            })
+            # Extract actual badge name from display string
+            badge_display = self.badge_var.get()
+            badge_name = badge_display.split(' - ')[0] if ' - ' in badge_display else badge_display
             
-            label_text = "Active" if label == "active" else "Not Active"
-            self.status_label.config(text=f"Labeled as '{label_text}' - Total labels: {len(self.labels)}")
+            # Check if we should apply to all badges
+            if self.apply_to_all_var.get():
+                # Apply to all badges
+                for badge in self.data['Badge_Name'].unique():
+                    self.labels.append({
+                        'badge': badge,
+                        'start': start_time,
+                        'end': end_time,
+                        'label': label
+                    })
+                label_text = "Active" if label == "active" else "Not Active"
+                self.status_label.config(text=f"Labeled as '{label_text}' for ALL badges - Total labels: {len(self.labels)}")
+            else:
+                # Apply to current badge only
+                self.labels.append({
+                    'badge': badge_name,
+                    'start': start_time,
+                    'end': end_time,
+                    'label': label
+                })
+                label_text = "Active" if label == "active" else "Not Active"
+                self.status_label.config(text=f"Labeled as '{label_text}' - Total labels: {len(self.labels)}")
             
             # Clear selection and update plot
             self.clear_selection()
@@ -413,27 +538,189 @@ class BadgeDataProcessor:
         
         # Update status
         if hasattr(self, 'status_label'):
-            self.status_label.config(text="Ready to select - click and drag on the graph to select a time period")
+            self.status_label.config(text="Ready to select - click and drag to select | Shortcuts: A=Active, N=Not Active, Delete=Remove label")
+    
+    def track_cursor_position(self, event):
+        """Track cursor position for label management"""
+        if event.inaxes == self.ax and event.xdata is not None:
+            self.cursor_time = event.xdata
+    
+    def delete_label_at_cursor(self):
+        """Delete label at current cursor position"""
+        if self.cursor_time is not None:
+            self.delete_label_at_position(self.cursor_time)
+    
+    def delete_label_at_position(self, time_position):
+        """Delete label at the given time position"""
+        if time_position is None:
+            return
+        
+        # Extract actual badge name from display string
+        badge_display = self.badge_var.get()
+        badge_name = badge_display.split(' - ')[0] if ' - ' in badge_display else badge_display
+        
+        # Convert matplotlib time to datetime
+        click_time = mdates.num2date(time_position).replace(tzinfo=None)
+        
+        # Find label at this position
+        label_to_delete = None
+        for i, label in enumerate(self.labels):
+            if label['badge'] == badge_name:
+                label_start = self.normalize_datetime(label['start'])
+                label_end = self.normalize_datetime(label['end'])
+                
+                if label_start <= click_time <= label_end:
+                    label_to_delete = i
+                    break
+        
+        if label_to_delete is not None:
+            deleted_label = self.labels[label_to_delete]
+            label_type = deleted_label['label']
+            self.labels.pop(label_to_delete)
+            self.status_label.config(text=f"Deleted '{label_type}' label - Total labels: {len(self.labels)}")
+            self.update_plot()
+            print(f"[DEBUG] Deleted label at index {label_to_delete}")
+        else:
+            self.status_label.config(text="No label found at cursor position")
+    
+    def show_label_manager(self):
+        """Show a window with all current labels for review and management"""
+        manager_window = tk.Toplevel(self.root)
+        manager_window.title("Label Manager")
+        manager_window.geometry("800x500")
+        
+        # Create main frame
+        main_frame = ttk.Frame(manager_window, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
+        title_label = ttk.Label(main_frame, text="All Labels", font=('Arial', 14, 'bold'))
+        title_label.pack(pady=(0, 10))
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Create header
+        header_frame = ttk.Frame(scrollable_frame)
+        header_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(header_frame, text="Badge", font=('Arial', 10, 'bold'), width=15).pack(side=tk.LEFT, padx=5)
+        ttk.Label(header_frame, text="Start Time", font=('Arial', 10, 'bold'), width=20).pack(side=tk.LEFT, padx=5)
+        ttk.Label(header_frame, text="End Time", font=('Arial', 10, 'bold'), width=20).pack(side=tk.LEFT, padx=5)
+        ttk.Label(header_frame, text="Label", font=('Arial', 10, 'bold'), width=12).pack(side=tk.LEFT, padx=5)
+        ttk.Label(header_frame, text="Actions", font=('Arial', 10, 'bold'), width=10).pack(side=tk.LEFT, padx=5)
+        
+        # Add separator
+        ttk.Separator(scrollable_frame, orient='horizontal').pack(fill=tk.X, padx=5, pady=5)
+        
+        # Display each label
+        for idx, label in enumerate(self.labels):
+            label_frame = ttk.Frame(scrollable_frame)
+            label_frame.pack(fill=tk.X, padx=5, pady=2)
+            
+            # Badge name with person if available
+            if self.has_person_names and label['badge'] in self.badge_to_person:
+                badge_display = f"{label['badge']} ({self.badge_to_person[label['badge']]})"
+            else:
+                badge_display = label['badge']
+            
+            ttk.Label(label_frame, text=badge_display, width=15).pack(side=tk.LEFT, padx=5)
+            ttk.Label(label_frame, text=label['start'].strftime('%Y-%m-%d %H:%M:%S'), width=20).pack(side=tk.LEFT, padx=5)
+            ttk.Label(label_frame, text=label['end'].strftime('%Y-%m-%d %H:%M:%S'), width=20).pack(side=tk.LEFT, padx=5)
+            
+            # Color-coded label type
+            label_color = 'green' if label['label'] == 'active' else 'red'
+            label_text = label['label'].upper()
+            label_widget = tk.Label(label_frame, text=label_text, width=12, fg=label_color, font=('Arial', 9, 'bold'))
+            label_widget.pack(side=tk.LEFT, padx=5)
+            
+            # Delete button for this label
+            delete_btn = ttk.Button(
+                label_frame,
+                text="Delete",
+                width=10,
+                command=lambda i=idx: self.delete_label_by_index(i, manager_window)
+            )
+            delete_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Summary at bottom
+        summary_frame = ttk.Frame(manager_window, padding=10)
+        summary_frame.pack(fill=tk.X)
+        
+        active_count = sum(1 for lbl in self.labels if lbl['label'] == 'active')
+        not_active_count = sum(1 for lbl in self.labels if lbl['label'] == 'not_active')
+        
+        summary_text = f"Total: {len(self.labels)} labels | Active: {active_count} | Not Active: {not_active_count}"
+        ttk.Label(summary_frame, text=summary_text, font=('Arial', 11)).pack()
+        
+        # Close button
+        ttk.Button(summary_frame, text="Close", command=manager_window.destroy).pack(pady=10)
+    
+    def delete_label_by_index(self, index, window):
+        """Delete a label by its index from the label manager"""
+        if 0 <= index < len(self.labels):
+            deleted_label = self.labels[index]
+            self.labels.pop(index)
+            self.update_plot()
+            window.destroy()  # Close and reopen to refresh
+            self.show_label_manager()  # Reopen with updated list
 
-    def prompt_auto_label_sound(self):
+    def prompt_auto_label(self):
         """Ask user for auto-label parameters and run auto-labeling"""
         if self.data is None:
             messagebox.showwarning("Warning", "No data loaded to auto-label")
             return
-        # Ask for threshold (use default constant as initial value)
-        threshold = simpledialog.askinteger(
-            "Auto-label by Sound",
-            f"Sound level threshold to mark 'active' (>= threshold = active).\nDefault: {SOUND_LEVEL_THRESHOLD}",
+        
+        # Ask for sound threshold
+        sound_threshold = simpledialog.askinteger(
+            "Auto-label Settings",
+            f"Sound level threshold for 'active' classification:\nDefault: {SOUND_LEVEL_THRESHOLD}",
             initialvalue=SOUND_LEVEL_THRESHOLD,
             minvalue=0,
-            maxvalue=1000
+            maxvalue=20000
         )
-        if threshold is None:
+        if sound_threshold is None:
+            return
+        
+        # Ask for acceleration threshold
+        accel_threshold = simpledialog.askfloat(
+            "Auto-label Settings",
+            f"Acceleration threshold for 'active' classification:\nDefault: {ACCELERATION_THRESHOLD} (typical motion)",
+            initialvalue=ACCELERATION_THRESHOLD,
+            minvalue=0.0,
+            maxvalue=10.0
+        )
+        if accel_threshold is None:
+            return
+        
+        # Ask for sound weight (acceleration will be 1 - sound_weight)
+        sound_weight = simpledialog.askfloat(
+            "Auto-label Settings",
+            f"Sound weight (0.0 to 1.0):\n{SOUND_WEIGHT} = {SOUND_WEIGHT*100:.0f}% sound, {(1-SOUND_WEIGHT)*100:.0f}% acceleration\nHigher = more emphasis on sound",
+            initialvalue=SOUND_WEIGHT,
+            minvalue=0.0,
+            maxvalue=1.0
+        )
+        if sound_weight is None:
             return
 
         min_dur = simpledialog.askinteger(
-            "Auto-label by Sound",
-            "Minimum contiguous duration (seconds) to consider (e.g. 2):",
+            "Auto-label Settings",
+            "Minimum contiguous duration (seconds) to label:\nDefault: 2",
             initialvalue=2,
             minvalue=1
         )
@@ -443,20 +730,42 @@ class BadgeDataProcessor:
         # Remove any previously auto-generated labels so repeated runs replace them
         self.labels = [lbl for lbl in self.labels if lbl.get('source') != 'auto']
 
-        counts = self.auto_label_by_sound(level_threshold=threshold, min_duration_seconds=min_dur)
-        messagebox.showinfo("Auto-label Complete", f"Created {counts.get('active',0)} 'active' and {counts.get('not_active',0)} 'not_active' labels using threshold {threshold}.")
+        counts = self.auto_label_combined(
+            sound_threshold=sound_threshold,
+            accel_threshold=accel_threshold,
+            sound_weight=sound_weight,
+            min_duration_seconds=min_dur
+        )
+        
+        accel_weight = 1.0 - sound_weight
+        messagebox.showinfo(
+            "Auto-label Complete",
+            f"Created {counts.get('active',0)} 'active' and {counts.get('not_active',0)} 'not_active' labels.\n\n"
+            f"Settings:\n"
+            f"  Sound threshold: {sound_threshold}\n"
+            f"  Acceleration threshold: {accel_threshold}\n"
+            f"  Weights: {sound_weight:.0%} sound, {accel_weight:.0%} acceleration"
+        )
         self.update_plot()
 
-    def auto_label_by_sound(self, level_threshold=None, min_duration_seconds=2):
-        """Auto-label contiguous periods as 'active' or 'not_active' using a fixed level threshold.
+    def auto_label_combined(self, sound_threshold=None, accel_threshold=None, sound_weight=None, min_duration_seconds=2):
+        """Auto-label contiguous periods as 'active' or 'not_active' using combined sound and acceleration.
 
-        - level_threshold: numeric threshold; values >= threshold -> 'active', else 'not_active'
+        - sound_threshold: numeric threshold for sound level (default: SOUND_LEVEL_THRESHOLD)
+        - accel_threshold: numeric threshold for acceleration (default: ACCELERATION_THRESHOLD)
+        - sound_weight: weight for sound 0.0 to 1.0 (default: SOUND_WEIGHT), acceleration gets (1 - sound_weight)
         - min_duration_seconds: minimum contiguous run length to create a label
 
         Returns a dict with counts: {'active': n, 'not_active': m}
         """
-        if level_threshold is None:
-            level_threshold = SOUND_LEVEL_THRESHOLD
+        if sound_threshold is None:
+            sound_threshold = SOUND_LEVEL_THRESHOLD
+        if accel_threshold is None:
+            accel_threshold = ACCELERATION_THRESHOLD
+        if sound_weight is None:
+            sound_weight = SOUND_WEIGHT
+        
+        accel_weight = 1.0 - sound_weight
 
         counts = {'active': 0, 'not_active': 0}
 
@@ -465,8 +774,18 @@ class BadgeDataProcessor:
             if badge_data.empty:
                 continue
 
-            # Create mask: True=active, False=not_active. Treat NaN as False.
-            mask = (badge_data['Sound_Level'].fillna(-np.inf) >= level_threshold)
+            # Normalize sound and acceleration to 0-1 scale for comparison
+            # Sound: 1 if >= threshold, 0 otherwise
+            sound_active = (badge_data['Sound_Level'].fillna(0) >= sound_threshold).astype(float)
+            
+            # Acceleration: 1 if >= threshold, 0 otherwise
+            accel_active = (badge_data['Acceleration'].fillna(0) >= accel_threshold).astype(float)
+            
+            # Combine with weighted average
+            combined_score = (sound_weight * sound_active) + (accel_weight * accel_active)
+            
+            # Consider active if combined score >= 0.5 (majority vote)
+            mask = combined_score >= 0.5
             badge_data = badge_data.assign(_mask=mask)
 
             # Identify contiguous runs where mask value is constant
@@ -542,7 +861,10 @@ class BadgeDataProcessor:
         badges = processed_data['Badge_Name'].unique()
         
         for badge in badges:
-            print(f"Calculating statistics for {badge}...")
+            if self.has_person_names and badge in self.badge_to_person:
+                print(f"Calculating statistics for {badge} ({self.badge_to_person[badge]})...")
+            else:
+                print(f"Calculating statistics for {badge}...")
             badge_data = processed_data[processed_data['Badge_Name'] == badge]
             
             # Calculate rolling statistics
@@ -596,13 +918,19 @@ class BadgeDataProcessor:
         activity_counts = processed_data['activity_label'].value_counts()
         badges = processed_data['Badge_Name'].unique()
         
+        # Create badge list with person names if available
+        if self.has_person_names:
+            badge_list = ', '.join([f"{badge} ({self.badge_to_person[badge]})" for badge in sorted(badges)])
+        else:
+            badge_list = ', '.join(sorted(badges))
+        
         summary_text = f"""Badge Data Processing Summary
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 Processing Configuration:
 - Total data points processed: {len(processed_data)}
 - Badges processed: {len(badges)}
-- Badge names: {', '.join(sorted(badges))}
+- Badge names: {badge_list}
 - Labels created: {len(self.labels)}
 
 Activity Distribution:
@@ -619,7 +947,13 @@ Output Files:
 
 Data Columns:
 - Timestamp: Original timestamp of data point
-- Badge_Name: Name of the badge
+- Badge_Name: Name of the badge"""
+        
+        if self.has_person_names:
+            summary_text += """
+- Person_Name: Name of the person wearing the badge"""
+        
+        summary_text += """
 - Sound_Level: Sound level measurement
 - Acceleration: Acceleration measurement  
 - Raw_Data: Original raw data string
