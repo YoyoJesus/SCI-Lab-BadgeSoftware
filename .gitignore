@@ -216,3 +216,6 @@ Data Cleanup and Normalization/processed_data/
 Data Cleanup and Normalization/processed_data/*
 
 PRESENTATION_NOTES.txt
+currentdata/
+
+/Feature Extraction/feature_extraction_outputs

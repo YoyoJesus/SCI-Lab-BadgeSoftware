@@ -13,9 +13,15 @@ Compares manual vs auto activity labels on a per-sample basis.
 Output:
 processed_data/label_comparison/comparison_<timestamp>/
 
+Usage:
+  python label_comparison.py                          # interactive file dialogs
+  python label_comparison.py manual.csv auto.csv      # with specific files
+  python label_comparison.py manual.csv auto.csv --anonymize   # anonymize Person_Name
+
 Author: Label Comparison Tool
 """
 
+import argparse
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
@@ -33,10 +39,12 @@ import numpy as np
 def select_csv(title):
     root = tk.Tk()
     root.withdraw()
+    root.attributes("-topmost", True)  # force dialog above other windows on Windows
 
     file_path = filedialog.askopenfilename(
         title=title,
-        filetypes=[("CSV files", "*.csv")]
+        filetypes=[("CSV files", "*.csv")],
+        parent=root,
     )
 
     root.destroy()
@@ -186,20 +194,71 @@ def plot_comparison_grid(cm, labels, output_path, title="Badge Label Comparison"
 
 
 # --------------------------------------------------
+# Anonymization
+# --------------------------------------------------
+def anonymize_person_names(merged_df):
+    """
+    Replace real person names with Person 1, Person 2, ... (sorted alphabetically).
+    Returns the modified dataframe and the name mapping dict.
+    """
+    real_names = sorted(
+        n for n in merged_df["Person_Name"].dropna().unique()
+        if str(n).strip()
+    )
+    name_map = {name: f"Person {i+1}" for i, name in enumerate(real_names)}
+    merged_df = merged_df.copy()
+    merged_df["Person_Name"] = merged_df["Person_Name"].map(
+        lambda n: name_map.get(n, n)
+    )
+    return merged_df, name_map
+
+
+# --------------------------------------------------
 # Main logic
 # --------------------------------------------------
-def main():
+def main(manual_file=None, auto_file=None):
+    parser = argparse.ArgumentParser(
+        description="Compare manual vs auto activity labels.",
+        add_help=True,
+    )
+    parser.add_argument(
+        "manual", nargs="?", type=Path, default=None,
+        help="Path to manually labeled CSV (optional; prompts if omitted)",
+    )
+    parser.add_argument(
+        "auto", nargs="?", type=Path, default=None,
+        help="Path to auto-labeled CSV (optional; prompts if omitted)",
+    )
+    parser.add_argument(
+        "--anonymize", action="store_true",
+        help="Replace participant names with Person 1, Person 2, etc. in all outputs.",
+    )
+    args = parser.parse_args()
+
     print("=== Label Comparison Tool ===\n")
 
-    manual_file = select_csv("Select MANUALLY labeled CSV")
-    if not manual_file:
-        print("No manual file selected. Exiting.")
-        return
+    # Use file arguments or fall back to file dialogs
+    if args.manual:
+        manual_file = args.manual
+        if not manual_file.exists():
+            print(f"ERROR: Manual file not found: {manual_file}")
+            return
+    else:
+        manual_file = select_csv("Select MANUALLY labeled CSV")
+        if not manual_file:
+            print("No manual file selected. Exiting.")
+            return
 
-    auto_file = select_csv("Select AUTO-labeled CSV")
-    if not auto_file:
-        print("No auto file selected. Exiting.")
-        return
+    if args.auto:
+        auto_file = args.auto
+        if not auto_file.exists():
+            print(f"ERROR: Auto file not found: {auto_file}")
+            return
+    else:
+        auto_file = select_csv("Select AUTO-labeled CSV")
+        if not auto_file:
+            print("No auto file selected. Exiting.")
+            return
 
     print(f"Manual file: {manual_file}")
     print(f"Auto file:   {auto_file}\n")
@@ -295,6 +354,10 @@ def main():
     merged = merged.drop(columns=["Person_Name_manual", "Person_Name_auto"])
 
     merged["label_match"] = merged["manual_label"] == merged["auto_label"]
+
+    if args.anonymize:
+        merged, anon_map = anonymize_person_names(merged)
+        print(f"Anonymized: {anon_map}\n")
 
     # --------------------------------------------------
     # Speaker-state pre-computation (reused throughout)
@@ -423,6 +486,16 @@ def main():
     csv_out = run_dir / f"label_comparison_{timestamp}.csv"
     summary_out = run_dir / f"summary_{timestamp}.txt"
     per_badge_summary_out = run_dir / f"per_badge_summary_{timestamp}.txt"
+
+    # Anonymize if requested
+    name_map = {}
+    if args.anonymize:
+        merged, name_map = anonymize_person_names(merged)
+        # Update per-badge metrics with anonymized names
+        for badge_name, metrics in per_badge_metrics.items():
+            if "person_name" in metrics and metrics["person_name"] in name_map:
+                metrics["person_name"] = name_map[metrics["person_name"]]
+        print(f"  Anonymized: {name_map}\n")
 
     merged.to_csv(csv_out, index=False)
 
