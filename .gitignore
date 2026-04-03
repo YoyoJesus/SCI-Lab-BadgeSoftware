@@ -219,3 +219,9 @@ PRESENTATION_NOTES.txt
 currentdata/
 
 /Feature Extraction/feature_extraction_outputs
+auto_labeler_description.txt
+*.arff
+/Feature Extraction/weka_outputs
+feature_extraction_description.txt
+weka_exporter_description.txt
+conclusion_and_future_work.txt
