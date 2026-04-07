@@ -225,3 +225,5 @@ auto_labeler_description.txt
 feature_extraction_description.txt
 weka_exporter_description.txt
 conclusion_and_future_work.txt
+*.png
+*.txt
