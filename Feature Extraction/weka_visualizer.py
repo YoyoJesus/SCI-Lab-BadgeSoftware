@@ -205,35 +205,52 @@ def fig_per_class_metrics(class_rows, ax):
         return
 
     metrics = ["tp_rate", "precision", "recall", "f_measure", "roc_area", "mcc"]
-    labels  = ["TP Rate", "Precision", "Recall", "F-Measure", "ROC Area", "MCC"]
+    col_labels = ["TP Rate", "Precision", "Recall", "F-Measure", "ROC Area", "MCC"]
     classes = [r["class"] for r in class_rows]
-    n_cls   = len(classes)
-    n_met   = len(metrics)
+    n_cls = len(classes)
+    n_met = len(metrics)
 
-    x = np.arange(n_met)
-    width = 0.8 / n_cls
+    # Build value matrix
+    data = np.array([[row[m] for m in metrics] for row in class_rows])
 
-    for i, row in enumerate(class_rows):
-        vals = [row[m] for m in metrics]
-        offset = (i - n_cls / 2 + 0.5) * width
-        bars = ax.bar(x + offset, vals, width,
-                      label=row["class"],
-                      color=COLORS["bar_palette"][i % len(COLORS["bar_palette"])],
-                      edgecolor="white", linewidth=0.5)
-        for bar, val in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + 0.005,
-                    f"{val:.2f}", ha="center", va="bottom",
-                    fontsize=6, rotation=0)
+    # MCC can be negative — normalise each column 0-1 for colour only
+    col_norm = np.zeros_like(data)
+    for j in range(n_met):
+        col_min, col_max = data[:, j].min(), data[:, j].max()
+        if col_max > col_min:
+            col_norm[:, j] = (data[:, j] - col_min) / (col_max - col_min)
+        else:
+            col_norm[:, j] = 0.5
 
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylim(0, 1.22)
-    ax.set_ylabel("Score")
-    ax.set_title("Per-Class Performance Metrics", fontweight="bold")
-    ax.legend(title="Class", fontsize=8, title_fontsize=8)
-    ax.yaxis.grid(True, linestyle="--", alpha=0.5)
-    ax.set_axisbelow(True)
+    im = ax.imshow(col_norm, cmap="RdYlGn", vmin=0, vmax=1, aspect="auto")
+
+    # Axis labels
+    ax.set_xticks(range(n_met))
+    ax.set_xticklabels(col_labels, fontsize=10, fontweight="bold")
+    ax.set_yticks(range(n_cls))
+    ax.set_yticklabels(classes, fontsize=11, fontweight="bold")
+    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False,
+                   labelsize=11)
+    ax.xaxis.set_label_position("top")
+
+    # Value annotations inside each cell
+    for i in range(n_cls):
+        for j in range(n_met):
+            brightness = col_norm[i, j]
+            txt_color = "white" if brightness < 0.35 else "black"
+            ax.text(j, i, f"{data[i, j]:.3f}",
+                    ha="center", va="center",
+                    fontsize=13, fontweight="bold", color=txt_color)
+
+    # Grid lines between cells
+    for xv in np.arange(-0.5, n_met, 1):
+        ax.axvline(xv, color="white", lw=2.5)
+    for yv in np.arange(-0.5, n_cls, 1):
+        ax.axhline(yv, color="white", lw=2.5)
+
+    ax.set_title("Per-Class Performance Metrics", fontweight="bold",
+                 fontsize=13, pad=42)
+    ax.spines[:].set_visible(False)
 
 
 def fig_confusion_matrix(matrix, labels, ax):
@@ -251,23 +268,25 @@ def fig_confusion_matrix(matrix, labels, ax):
     im = ax.imshow(norm, cmap=COLORS["heatmap_conf"], vmin=0, vmax=1)
     ax.set_xticks(range(n))
     ax.set_yticks(range(n))
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_yticklabels(labels, fontsize=9)
-    ax.set_xlabel("Predicted", fontsize=9)
-    ax.set_ylabel("Actual", fontsize=9)
-    ax.set_title("Confusion Matrix", fontweight="bold")
+    ax.set_xticklabels(labels, fontsize=11)
+    ax.set_yticklabels(labels, fontsize=11)
+    ax.set_xlabel("Predicted", fontsize=11, labelpad=8)
+    ax.set_ylabel("Actual", fontsize=11, labelpad=8)
+    ax.set_title("Confusion Matrix", fontweight="bold", fontsize=13, pad=10)
 
     for i in range(n):
         for j in range(n):
             text_color = "white" if norm[i, j] > 0.55 else "black"
             ax.text(j, i, str(matrix[i, j]),
                     ha="center", va="center",
-                    fontsize=13, fontweight="bold", color=text_color)
+                    fontsize=15, fontweight="bold", color=text_color)
 
-    # Attach colorbar strictly to this axes so it doesn't bleed into neighbours
+    # Colorbar below the axes so it doesn't crowd the labels
     divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="8%", pad=0.08)
-    plt.colorbar(im, cax=cax, label="Row-normalised")
+    cax = divider.append_axes("bottom", size="6%", pad=0.55)
+    cb = plt.colorbar(im, cax=cax, orientation="horizontal")
+    cb.set_label("Row-normalised", fontsize=9)
+    cb.ax.tick_params(labelsize=8)
 
 
 def fig_weight_heatmap(nodes, ax):
@@ -391,22 +410,30 @@ def build_dashboard(text, title="Weka Classifier Results"):
     matrix, labels = parse_confusion_matrix(text)
     nodes   = parse_node_weights(text)
 
-    fig = plt.figure(figsize=(18, 14))
-    fig.patch.set_facecolor("#F5F5F5")
-    fig.suptitle(title, fontsize=16, fontweight="bold", y=0.98)
+    has_nodes = bool(nodes)
+
+    # Decide rows: always show summary+metrics+confusion; only add weight rows if nodes exist
+    n_rows = 3 if has_nodes else 2
+    height_ratios = [1.4, 1.4, 1.2] if has_nodes else [1.4, 1.4]
+
+    fig = plt.figure(figsize=(18, 6 * n_rows))
+    fig.patch.set_facecolor("#F8F9FA")
+    fig.suptitle(title, fontsize=17, fontweight="bold", y=1.00)
 
     gs = gridspec.GridSpec(
-        3, 3,
+        n_rows, 3,
         figure=fig,
-        hspace=0.50, wspace=0.40,
-        left=0.07, right=0.97, top=0.93, bottom=0.05,
+        hspace=0.70, wspace=0.40,
+        left=0.07, right=0.97,
+        top=0.92, bottom=0.05,
+        height_ratios=height_ratios,
     )
 
     # Row 0 left: summary card
     ax_card = fig.add_subplot(gs[0, 0])
     fig_summary_card(info, summary, ax_card)
 
-    # Row 0 middle+right: per-class metrics
+    # Row 0 right (spans 2 cols): per-class metrics heatmap
     ax_cls = fig.add_subplot(gs[0, 1:])
     fig_per_class_metrics(classes, ax_cls)
 
@@ -414,13 +441,14 @@ def build_dashboard(text, title="Weka Classifier Results"):
     ax_cm = fig.add_subplot(gs[1, 0])
     fig_confusion_matrix(matrix, labels, ax_cm)
 
-    # Row 1 middle+right: top feature importance
+    # Row 1 right: top feature importance (or blank if no nodes)
     ax_top = fig.add_subplot(gs[1, 1:])
     fig_top_features(nodes, ax_top, top_n=15)
 
-    # Row 2: full weight heatmap (spans all columns)
-    ax_heat = fig.add_subplot(gs[2, :])
-    fig_weight_heatmap(nodes, ax_heat)
+    if has_nodes:
+        # Row 2: full weight heatmap
+        ax_heat = fig.add_subplot(gs[2, :])
+        fig_weight_heatmap(nodes, ax_heat)
 
     return fig
 

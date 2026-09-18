@@ -183,7 +183,7 @@ def plot_comparison_grid(cm, labels, output_path, title="Badge Label Comparison"
             for j in range(n):
                 color = "white" if data[i, j] > threshold else "black"
                 ax.text(j, i, fmt_fn(data[i, j]),
-                        ha="center", va="center", color=color, fontsize=8)
+                        ha="center", va="center", color=color, fontsize=16)
 
         plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 

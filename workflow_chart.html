@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Badge Software Workflow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4f8;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    font-size: 28px;
+    color: #1a2e4a;
+    margin-bottom: 8px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: #5a7a9a;
+    margin-bottom: 40px;
+    text-align: center;
+  }
+
+  /* ── Main flow column ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    max-width: 860px;
+  }
+
+  /* Phase wrapper = label on left + block on right */
+  .phase-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 18px;
+  }
+  .phase-label {
+    width: 130px;
+    min-width: 130px;
+    text-align: right;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+
+  /* Colour-coded phase labels */
+  .phase-collect  { background: #2196F3; }
+  .phase-cleanup  { background: #9C27B0; }
+  .phase-label-ph { background: #FF5722; }
+  .phase-extract  { background: #4CAF50; }
+  .phase-export   { background: #FF9800; }
+  .phase-ml       { background: #607D8B; }
+
+  /* Individual step boxes */
+  .step {
+    flex: 1;
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .step-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .step-file {
+    font-size: 11.5px;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    color: rgba(255,255,255,0.85);
+    background: rgba(0,0,0,0.15);
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    width: fit-content;
+  }
+  .step-desc {
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    margin-top: 2px;
+    line-height: 1.45;
+  }
+
+  /* colours per phase */
+  .step-collect  { background: #1976D2; }
+  .step-cleanup  { background: #7B1FA2; }
+  .step-labeling { background: #E64A19; }
+  .step-extract  { background: #388E3C; }
+  .step-export   { background: #F57C00; }
+  .step-ml       { background: #455A64; }
+
+  /* Arrows between rows */
+  .arrow {
+    width: 36px;
+    min-width: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 0 138px; /* align with step column */
+  }
+  .arrow-line {
+    width: 3px;
+    height: 28px;
+    background: #90a4ae;
+  }
+  .arrow-head {
+    width: 0; height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 13px solid #90a4ae;
+  }
+
+  /* OR branch for manual vs auto labeling */
+  .branch {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    gap: 18px;
+  }
+  .branch-spacer { width: 130px; min-width: 130px; }
+  .branch-steps {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+  }
+  .branch-step {
+    flex: 1;
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .or-badge {
+    align-self: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: #90a4ae;
+    padding: 0 4px;
+  }
+
+  /* Data artefacts (CSV outputs) */
+  .artefact-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 18px;
+  }
+  .artefact-spacer { width: 130px; min-width: 130px; }
+  .artefact {
+    flex: 1;
+    background: #fff;
+    border: 2px dashed #b0bec5;
+    border-radius: 8px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #546e7a;
+  }
+  .artefact-icon { font-size: 18px; }
+  .artefact-name { font-family: 'Consolas', monospace; font-weight: 600; }
+  .artefact-desc { font-size: 11px; color: #90a4ae; }
+
+  /* Small arrow variant for after artefacts */
+  .arrow-sm {
+    padding-left: 138px;
+  }
+  .arrow-sm .arrow-line { height: 18px; }
+
+  /* Optional side note */
+  .side-note {
+    font-size: 11px;
+    color: #888;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  /* Legend */
+  .legend {
+    margin-top: 36px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 11px;
+    color: #546e7a;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<h1>SCI-Lab Badge Software — Pipeline Overview</h1>
+<p class="subtitle">Voice Activity &amp; Meeting Productivity Analysis from Wearable Badges</p>
+
+<div class="flow">
+
+  <!-- ══ 1. DATA COLLECTION ══ -->
+  <div class="phase-row">
+    <div class="phase-label phase-collect">Data<br>Collection</div>
+    <div class="step step-collect">
+      <div class="step-title">BLE Badge Scanning &amp; Data Collection</div>
+      <div class="step-file">data_collection.py</div>
+      <div class="step-desc">
+        Scans for known badge MAC addresses via Bluetooth LE &rarr; connects to all detected badges in parallel &rarr;
+        streams <strong>Sound Level, RSSI, Acceleration, GR</strong> in real-time &rarr; saves every reading to a unified CSV.
+        Person names are assigned to each badge at startup.
+      </div>
+    </div>
+  </div>
+
+  <!-- Arrow + artefact -->
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+  <div class="artefact-row">
+    <div class="artefact-spacer"></div>
+    <div class="artefact">
+      <span class="artefact-icon">📄</span>
+      <div>
+        <div class="artefact-name">badge_data/AllBadges_data_TIMESTAMP.csv</div>
+        <div class="artefact-desc">Raw timestamped sensor readings from all badges in one file</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- ══ OPTIONAL: STITCHING ══ -->
+  <div class="phase-row">
+    <div class="phase-label phase-cleanup" style="font-size:10px;">Optional<br>Stitching</div>
+    <div class="step step-cleanup" style="opacity:0.85;">
+      <div class="step-title">Multi-Session Stitcher <span style="font-weight:400;font-size:12px;">(optional)</span></div>
+      <div class="step-file">badge_stitcher.py</div>
+      <div class="step-desc">
+        Merges multiple session CSV files into one, reconciles badge→person mappings across sessions,
+        and adds a <em>Session</em> column for traceability.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- ══ 2. LABELING ══ -->
+  <!-- branch: manual OR auto -->
+  <div class="branch">
+    <div class="branch-spacer">
+      <div class="phase-label phase-label-ph" style="text-align:right;font-size:10.5px;margin-top:10px;">Activity<br>Labeling</div>
+    </div>
+    <div class="branch-steps">
+      <div class="branch-step step-labeling">
+        <div class="step-title">Manual Labeler</div>
+        <div class="step-file">badge_data_processor.py</div>
+        <div class="step-desc">
+          Interactive GUI: plots sensor signals, user drags time regions and presses
+          <strong>A</strong> (active) / <strong>N</strong> (not active). Exports per-badge labeled CSVs.
+        </div>
+      </div>
+      <div class="or-badge">— OR —</div>
+      <div class="branch-step step-labeling">
+        <div class="step-title">Auto Labeler</div>
+        <div class="step-file">auto_label.py</div>
+        <div class="step-desc">
+          Peak-based speech detection: normalises sound &amp; acceleration, compares badges in 500 ms bins,
+          applies majority-vote smoothing → labels each row <em>active / not_active</em> &amp; identifies the speaker.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- comparison side-note -->
+  <div class="artefact-row" style="margin-top:6px;">
+    <div class="artefact-spacer"></div>
+    <div style="flex:1;font-size:11px;color:#888;font-style:italic;padding-left:4px;">
+      ↳ label_comparison.py can diff manual vs auto labels to evaluate auto-labeler accuracy
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+  <div class="artefact-row">
+    <div class="artefact-spacer"></div>
+    <div class="artefact">
+      <span class="artefact-icon">📄</span>
+      <div>
+        <div class="artefact-name">processed_data/auto_label/&lt;meeting&gt;.csv</div>
+        <div class="artefact-desc">Per-row labels: auto_activity_label, auto_speaker, norm_sound, norm_accel, speech_score, time_bin</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- ══ 3. FEATURE EXTRACTION ══ -->
+  <div class="phase-row">
+    <div class="phase-label phase-extract">Feature<br>Extraction</div>
+    <div class="step step-extract">
+      <div class="step-title">Meeting Feature Extractor</div>
+      <div class="step-file">feature_extraction.py</div>
+      <div class="step-desc">
+        Aggregates labeled data into three feature tables:
+        <strong>meeting-level</strong> (speaking ratio, silence ratio, turns/min, turn equity, Gini coefficient…),
+        <strong>participant-level</strong> (per-person talk share, turn count…), and
+        <strong>window-level</strong> (rolling 5-min windows). Also generates <em>meeting_visualizer.py</em> charts.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+  <div class="artefact-row">
+    <div class="artefact-spacer"></div>
+    <div class="artefact" style="flex-direction:column;align-items:flex-start;gap:4px;">
+      <div style="display:flex;align-items:center;gap:8px;"><span class="artefact-icon">📄</span><span class="artefact-name">meeting_features.csv</span><span class="artefact-desc">— one row per meeting</span></div>
+      <div style="display:flex;align-items:center;gap:8px;"><span class="artefact-icon">📄</span><span class="artefact-name">participant_features.csv</span><span class="artefact-desc">— one row per (meeting × participant)</span></div>
+      <div style="display:flex;align-items:center;gap:8px;"><span class="artefact-icon">📄</span><span class="artefact-name">window_features.csv</span><span class="artefact-desc">— one row per (meeting × time window)</span></div>
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- ══ 4. WEKA EXPORT ══ -->
+  <div class="phase-row">
+    <div class="phase-label phase-export">Weka<br>Export</div>
+    <div class="step step-export">
+      <div class="step-title">Weka Dataset Exporter</div>
+      <div class="step-file">weka_exporter.py</div>
+      <div class="step-desc">
+        Joins the three feature tables into one flat meeting-level dataset.
+        User labels each meeting's effectiveness (<em>low / medium / high</em>).
+        Writes a clean <strong>.csv</strong> and an <strong>.arff</strong> file ready for Weka.
+        Results can be visualised with <em>weka_visualizer.py</em>.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+  <div class="artefact-row">
+    <div class="artefact-spacer"></div>
+    <div class="artefact">
+      <span class="artefact-icon">📊</span>
+      <div>
+        <div class="artefact-name">weka_outputs/meeting_dataset.arff</div>
+        <div class="artefact-desc">Meeting-level feature matrix with effectiveness class labels — loaded directly into Weka</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow arrow-sm"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+  <!-- ══ 5. ML CLASSIFICATION ══ -->
+  <div class="phase-row">
+    <div class="phase-label phase-ml">ML<br>Analysis</div>
+    <div class="step step-ml">
+      <div class="step-title">Weka Machine Learning</div>
+      <div class="step-file">Weka (external tool)</div>
+      <div class="step-desc">
+        Loads the ARFF dataset and runs classifiers (e.g. Random Forest, Naïve Bayes, J48)
+        to predict meeting effectiveness from interaction features.
+        Cross-validation &amp; attribute selection performed in Weka GUI.
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .flow -->
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1976D2"></div> Data Collection</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7B1FA2"></div> Cleanup / Stitching</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#E64A19"></div> Activity Labeling</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#388E3C"></div> Feature Extraction</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#F57C00"></div> Weka Export</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#455A64"></div> ML Classification</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fff;border:2px dashed #b0bec5"></div> Data Artefact (CSV/ARFF)</div>
+</div>
+
+</body>
+</html>
