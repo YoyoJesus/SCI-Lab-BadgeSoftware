@@ -13,7 +13,7 @@
 
   Data format:
     DATA,time_ms,sound,ax,ay,az,gx,gy,gz,mx,my,mz,temp_c,humidity_pct,
-         pressure_kpa,proximity,red,green,blue,gsr,rssi
+         pressure_kpa,proximity,red,green,blue,ambient,gesture,gsr,rssi
 */
 
 #include <ArduinoBLE.h>
@@ -58,6 +58,8 @@ int lastProximity = 0;
 int lastRed = 0;
 int lastGreen = 0;
 int lastBlue = 0;
+int lastAmbient = 0;
+int lastGesture = GESTURE_NONE;
 float lastTemperature = NAN;
 float lastHumidity = NAN;
 float lastPressure = NAN;
@@ -65,7 +67,7 @@ bool hsMeasurementPending = false;
 uint32_t hsRequestMs = 0;
 uint32_t nextHsRequestMs = 0;
 uint32_t lastPressureReadMs = 0;
-uint32_t lastBleSendMs = 0;
+uint32_t lastGesturePollMs = 0;
 
 String serialCommand;
 String bleCommand;
@@ -111,7 +113,7 @@ void setup() {
     BLE.advertise();
   }
 
-  Serial.println("HEADER,time_ms,sound,ax,ay,az,gx,gy,gz,mx,my,mz,temp_c,humidity_pct,pressure_kpa,proximity,red,green,blue,gsr,rssi");
+  Serial.println("HEADER,time_ms,sound,ax,ay,az,gx,gy,gz,mx,my,mz,temp_c,humidity_pct,pressure_kpa,proximity,red,green,blue,ambient,gesture,gsr,rssi");
   sendStatus();
   Serial.println("INFO,Commands: RATE <1-25>, STREAM ON, STREAM OFF, STATUS, HELP");
   nextSampleMs = millis();
@@ -231,21 +233,20 @@ void sampleAndSend() {
 
   char line[BLE_PAYLOAD_SIZE];
   snprintf(line, sizeof(line),
-           "DATA,%lu,%lu,%.3f,%.3f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%d,%d",
+           "DATA,%lu,%lu,%.3f,%.3f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d",
            millis(), (unsigned long)soundLevel,
            ax, ay, az, gx, gy, gz, mx, my, mz,
            lastTemperature, lastHumidity, lastPressure,
-           lastProximity, lastRed, lastGreen, lastBlue, gsr, rssi);
+           lastProximity, lastRed, lastGreen, lastBlue, lastAmbient,
+           lastGesture, gsr, rssi);
+  lastGesture = GESTURE_NONE;
   sendLine(line);
 }
 
 void sendLine(const char *line) {
   Serial.println(line);
-  // Keep BLE notifications at 10 Hz maximum; USB serial can run at the full rate.
-  const uint32_t now = millis();
-  if (bleReady && BLE.connected() && now - lastBleSendMs >= 100) {
+  if (bleReady && BLE.connected()) {
     txChar.writeValue((const uint8_t *)line, strlen(line));
-    lastBleSendMs = now;
   }
 }
 
@@ -294,8 +295,12 @@ void updateSlowSensors() {
   }
 
   if (hasAPDS) {
+    if (now - lastGesturePollMs >= 250) {
+      if (APDS.gestureAvailable()) lastGesture = APDS.readGesture();
+      lastGesturePollMs = now;
+    }
     if (APDS.proximityAvailable()) lastProximity = APDS.readProximity();
-    if (APDS.colorAvailable()) APDS.readColor(lastRed, lastGreen, lastBlue);
+    if (APDS.colorAvailable()) APDS.readColor(lastRed, lastGreen, lastBlue, lastAmbient);
   }
 }
 
