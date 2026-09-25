@@ -125,6 +125,8 @@ def main():
             rows = block.splitlines()
             cols = len(rows[0].strip("|").split("|"))
             widths = "(1.1fr, 3.4fr, auto)" if "Number" in rows[0] else "(1.2fr, 3.5fr)" if cols==2 else "(2fr, 1fr, 1fr)"
+            if "Session-held-out" in rows[0]:
+                widths = "(1.6fr, 0.7fr, 1.1fr)"
             cells = []
             for row_index, row in enumerate(rows):
                 if row_index == 1:

@@ -1,0 +1,5911 @@
+{
+  "purpose": "Numerical reconstruction plus new exploratory baselines and session/context sensitivity; not independent effectiveness validation.",
+  "runtime": {
+    "weka_version": "3.8.6",
+    "weka_jar_sha256": "b89ae14ee7bf97627b07e8a932b3bebcd3a1288d2d25ebb348a04326f7cd0fd9",
+    "java_version": "openjdk version \"17.0.2\" 2022-01-18 LTS\nOpenJDK Runtime Environment Zulu17.32+13-CA (build 17.0.2+8-LTS)\nOpenJDK 64-Bit Server VM Zulu17.32+13-CA (build 17.0.2+8-LTS, mixed mode, sharing)"
+  },
+  "input_arff_sha256": "58295fb8ddebd5302cf346a8ca00ebef2ddcd54793af3516b8c7334b8c4bf896",
+  "historical_log": {
+    "source": "~/wekafiles/weka.log",
+    "sha256": "640420671a9c6e6dcd4e4f88453faa93a279d73bfd47ef81b239f56822725420",
+    "recorded_16_instance_relation": true,
+    "commands": [
+      "weka.classifiers.functions.MultilayerPerceptron -L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a",
+      "weka.classifiers.trees.RandomForest -P 100 -I 100 -num-slots 1 -K 0 -M 1.0 -V 0.001 -S 1"
+    ],
+    "qualification": "Application log records model settings, not ARFF hash, evaluation mode, fold seed, predictions, or scores. Seed 1 is an explicit reconstruction assumption, not a recovered historical fact."
+  },
+  "class_order": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "model_options": {
+    "ZeroR": [
+      "weka.classifiers.rules.ZeroR",
+      []
+    ],
+    "Logistic": [
+      "weka.classifiers.functions.Logistic",
+      [
+        "-R",
+        "1.0",
+        "-M",
+        "-1"
+      ]
+    ],
+    "RandomForest": [
+      "weka.classifiers.trees.RandomForest",
+      [
+        "-P",
+        "100",
+        "-I",
+        "100",
+        "-num-slots",
+        "1",
+        "-K",
+        "0",
+        "-M",
+        "1.0",
+        "-V",
+        "0.001",
+        "-S",
+        "1"
+      ]
+    ],
+    "MLP": [
+      "weka.classifiers.functions.MultilayerPerceptron",
+      [
+        "-L",
+        "0.3",
+        "-M",
+        "0.2",
+        "-N",
+        "500",
+        "-V",
+        "0",
+        "-S",
+        "0",
+        "-E",
+        "20",
+        "-H",
+        "a"
+      ]
+    ]
+  },
+  "protocol_notes": {
+    "stratified_10fold_seed1": "WEKA stratified CV, evaluation seed 1; paired across models. Fold IDs reconstructed from WEKA prediction output. RF/MLP options recovered from log; seed inferred by reconstruction.",
+    "leave_session_out": "15 context/date groups; both April 3 SCI segments kept together. Training preserves original ARFF order. Repeated participants remain across folds.",
+    "leave_context_out": "Three filename-derived contexts. Training preserves original ARFF order. Contexts are not participant-disjoint.",
+    "preprocessing": "All 36 saved predictors retained. WEKA Logistic standardizes using each training fold with fixed ridge 1.0 and no tuning; other models use recorded/default internal processing. Existing label generation remains feature-informed."
+  },
+  "participant_group_feasibility": {
+    "components": [
+      [
+        "CS1_lec1",
+        "CS1_lec2",
+        "hacksu_meeting_1",
+        "hacksu_meeting_2",
+        "hacksu_meeting_3",
+        "hacksu_meeting_4",
+        "hacksu_meeting_5",
+        "sci_meeting_03_06",
+        "sci_meeting_03_20",
+        "sci_meeting_04_03_p1",
+        "sci_meeting_04_03_p2",
+        "sci_meeting_04_10"
+      ],
+      [
+        "sci_meeting_10_10",
+        "sci_meeting_10_17",
+        "sci_meeting_10_31",
+        "sci_meeting_11_21"
+      ]
+    ],
+    "fold_class_coverage": [
+      {
+        "held_out_records": [
+          "CS1_lec1",
+          "CS1_lec2",
+          "hacksu_meeting_1",
+          "hacksu_meeting_2",
+          "hacksu_meeting_3",
+          "hacksu_meeting_4",
+          "hacksu_meeting_5",
+          "sci_meeting_03_06",
+          "sci_meeting_03_20",
+          "sci_meeting_04_03_p1",
+          "sci_meeting_04_03_p2",
+          "sci_meeting_04_10"
+        ],
+        "training_class_counts": {
+          "high": 2,
+          "low": 2
+        },
+        "missing_training_classes": [
+          "medium"
+        ]
+      },
+      {
+        "held_out_records": [
+          "sci_meeting_10_10",
+          "sci_meeting_10_17",
+          "sci_meeting_10_31",
+          "sci_meeting_11_21"
+        ],
+        "training_class_counts": {
+          "medium": 7,
+          "low": 3,
+          "high": 2
+        },
+        "missing_training_classes": []
+      }
+    ],
+    "status": "No complete two-way three-class participant-group evaluation: one training component lacks medium. Names are unverified identity proxies."
+  },
+  "runs": {
+    "stratified_10fold_seed1": {
+      "ZeroR": {
+        "metrics": {
+          "n": 16,
+          "correct": 7,
+          "matrix": [
+            [
+              0,
+              5,
+              0
+            ],
+            [
+              0,
+              7,
+              0
+            ],
+            [
+              0,
+              4,
+              0
+            ]
+          ],
+          "accuracy": 0.4375,
+          "kappa": 0.0,
+          "macro_f1": 0.2028985507246377,
+          "balanced_accuracy": 0.3333333333333333,
+          "mae": 0.4486655773420625,
+          "rmse": 0.48032314282030003
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 8,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p2",
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 9,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10",
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5",
+              "sci_meeting_04_03_p1"
+            ],
+            "shared_name_strings": 10,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.352941176471,
+              0.411764705882,
+              0.235294117647
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 0,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.352941176471,
+              0.411764705882,
+              0.235294117647
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 3,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 3,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 4,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 5,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.388888888889,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.444444444444,
+              0.222222222222
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 8,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.444444444444,
+              0.222222222222
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 9,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.444444444444,
+              0.222222222222
+            ]
+          }
+        ]
+      },
+      "Logistic": {
+        "metrics": {
+          "n": 16,
+          "correct": 11,
+          "matrix": [
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              0,
+              6,
+              1
+            ],
+            [
+              0,
+              2,
+              2
+            ]
+          ],
+          "accuracy": 0.6875,
+          "kappa": 0.4968553459119497,
+          "macro_f1": 0.6757703081232492,
+          "balanced_accuracy": 0.6523809523809524,
+          "mae": 0.2872724058290417,
+          "rmse": 0.40142316984173254
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 8,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p2",
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 9,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10",
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5",
+              "sci_meeting_04_03_p1"
+            ],
+            "shared_name_strings": 10,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.076794910685,
+              0.669636596619,
+              0.253568492696
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 0,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.018144070468,
+              0.44947531549,
+              0.532380614042
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.09788606817,
+              0.618143097886,
+              0.283970833945
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.581797325898,
+              0.394457677101,
+              0.023744997001
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.278814434985,
+              0.662456448775,
+              0.058729116239
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.903343694846,
+              0.081912876322,
+              0.014743428832
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 3,
+            "actual": "medium",
+            "predicted": "high",
+            "probabilities": [
+              0.073842941815,
+              0.287408047636,
+              0.638749010549
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 3,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.033513473682,
+              0.961574727041,
+              0.004911799277
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.032488235594,
+              0.924026201823,
+              0.043485562583
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 4,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.149066659698,
+              0.832109769947,
+              0.018823570355
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.141501059942,
+              0.563142553317,
+              0.295356386741
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 5,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.73463032861,
+              0.036869894299,
+              0.228499777092
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.037569781762,
+              0.760549706143,
+              0.201880512095
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.022717333062,
+              0.666751333178,
+              0.31053133376
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 8,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.029675868394,
+              0.57955503967,
+              0.390769091936
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 9,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.006380895578,
+              0.00955201899,
+              0.984067085433
+            ]
+          }
+        ]
+      },
+      "RandomForest": {
+        "metrics": {
+          "n": 16,
+          "correct": 15,
+          "matrix": [
+            [
+              4,
+              1,
+              0
+            ],
+            [
+              0,
+              7,
+              0
+            ],
+            [
+              0,
+              0,
+              4
+            ]
+          ],
+          "accuracy": 0.9375,
+          "kappa": 0.9024390243902439,
+          "macro_f1": 0.9407407407407407,
+          "balanced_accuracy": 0.9333333333333332,
+          "mae": 0.21291666666666664,
+          "rmse": 0.26119118157650983
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 8,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p2",
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 9,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10",
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5",
+              "sci_meeting_04_03_p1"
+            ],
+            "shared_name_strings": 10,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.05,
+              0.82,
+              0.13
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 0,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.0,
+              0.25,
+              0.75
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.03,
+              0.84,
+              0.13
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.73,
+              0.27,
+              0.0
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.37,
+              0.62,
+              0.01
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.71,
+              0.27,
+              0.02
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 3,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.07,
+              0.62,
+              0.31
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 3,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.61,
+              0.35,
+              0.04
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.34,
+              0.64,
+              0.02
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 4,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.76,
+              0.21,
+              0.03
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.09,
+              0.73,
+              0.18
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 5,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.43,
+              0.46,
+              0.11
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.09,
+              0.77,
+              0.14
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.04,
+              0.41,
+              0.55
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 8,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.03,
+              0.43,
+              0.54
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 9,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.05,
+              0.18,
+              0.77
+            ]
+          }
+        ]
+      },
+      "MLP": {
+        "metrics": {
+          "n": 16,
+          "correct": 13,
+          "matrix": [
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              0,
+              6,
+              1
+            ],
+            [
+              0,
+              0,
+              4
+            ]
+          ],
+          "accuracy": 0.8125,
+          "kappa": 0.7090909090909091,
+          "macro_f1": 0.812962962962963,
+          "balanced_accuracy": 0.8190476190476191,
+          "mae": 0.175837653486,
+          "rmse": 0.3268687790285652
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 8,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p2",
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 9,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10",
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5",
+              "sci_meeting_04_03_p1"
+            ],
+            "shared_name_strings": 10,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.0038330087,
+              0.878177153572,
+              0.117989837728
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 0,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.000529444458,
+              0.111337865794,
+              0.888132689748
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.006467039387,
+              0.964714830026,
+              0.028818130587
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.904030040742,
+              0.095849137872,
+              0.000120821386
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.269737459291,
+              0.729685439444,
+              0.000577101265
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.980205983013,
+              0.019692293055,
+              0.000101723932
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 3,
+            "actual": "medium",
+            "predicted": "high",
+            "probabilities": [
+              0.001699123668,
+              0.129749521866,
+              0.868551354466
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 3,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.248331085502,
+              0.75138689688,
+              0.000282017618
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.010689763301,
+              0.986850208394,
+              0.002460028305
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 4,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.070667204676,
+              0.928685560623,
+              0.000647234701
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.010538329659,
+              0.935953087866,
+              0.053508582475
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 5,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.77836552026,
+              0.000757778728,
+              0.220876701012
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.003786120924,
+              0.94867129433,
+              0.047542584745
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.001143540062,
+              0.334544738203,
+              0.664311721736
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 8,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.001639423857,
+              0.319616241279,
+              0.678744334864
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 9,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.000898054338,
+              0.005795745365,
+              0.993306200297
+            ]
+          }
+        ]
+      }
+    },
+    "leave_session_out": {
+      "ZeroR": {
+        "metrics": {
+          "n": 16,
+          "correct": 7,
+          "matrix": [
+            [
+              0,
+              5,
+              0
+            ],
+            [
+              0,
+              7,
+              0
+            ],
+            [
+              0,
+              4,
+              0
+            ]
+          ],
+          "accuracy": 0.4375,
+          "kappa": 0.0,
+          "macro_f1": 0.2028985507246377,
+          "balanced_accuracy": 0.3333333333333333,
+          "mae": 0.456699346405125,
+          "rmse": 0.48911554839213955
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2"
+            ],
+            "test": [
+              "CS1_lec1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec1"
+            ],
+            "test": [
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 10,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 11,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 12,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 13,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 14,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.388888888889,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.277777777778,
+              0.444444444444,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.444444444444,
+              0.222222222222
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 3,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.444444444444,
+              0.222222222222
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.388888888889,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.388888888889,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.388888888889,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.444444444444,
+              0.222222222222
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 8,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.277777777778,
+              0.444444444444,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 9,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.277777777778,
+              0.444444444444,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 10,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.444444444444,
+              0.222222222222
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 11,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.277777777778,
+              0.444444444444,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 12,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.388888888889,
+              0.277777777778
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 13,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 13,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 14,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.333333333333,
+              0.388888888889,
+              0.277777777778
+            ]
+          }
+        ]
+      },
+      "Logistic": {
+        "metrics": {
+          "n": 16,
+          "correct": 11,
+          "matrix": [
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              0,
+              6,
+              1
+            ],
+            [
+              0,
+              2,
+              2
+            ]
+          ],
+          "accuracy": 0.6875,
+          "kappa": 0.4968553459119497,
+          "macro_f1": 0.6757703081232492,
+          "balanced_accuracy": 0.6523809523809524,
+          "mae": 0.2885139818583333,
+          "rmse": 0.3917718872313661
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2"
+            ],
+            "test": [
+              "CS1_lec1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec1"
+            ],
+            "test": [
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 10,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 11,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 12,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 13,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 14,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.197937398666,
+              0.716925561624,
+              0.08513703971
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.098333930135,
+              0.889392648301,
+              0.012273421564
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.015132918536,
+              0.46829321155,
+              0.516573869915
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 3,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.029675868394,
+              0.57955503967,
+              0.390769091936
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.037569781762,
+              0.760549706143,
+              0.201880512095
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.075378584234,
+              0.642750427075,
+              0.281870988691
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.156003284068,
+              0.601590776341,
+              0.242405939591
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.006380895578,
+              0.00955201899,
+              0.984067085433
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 8,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.71533555598,
+              0.261944759567,
+              0.022719684453
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 9,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.084384271349,
+              0.904815364528,
+              0.010800364123
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 10,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.022717333062,
+              0.666751333178,
+              0.31053133376
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 11,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.82532553335,
+              0.156606416048,
+              0.018068050603
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 12,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.317916737771,
+              0.616582576741,
+              0.065500685489
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 13,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.058163123935,
+              0.668591420135,
+              0.27324545593
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 13,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.654688784138,
+              0.078714205445,
+              0.266597010417
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 14,
+            "actual": "medium",
+            "predicted": "high",
+            "probabilities": [
+              0.022381522004,
+              0.488664511347,
+              0.488953966649
+            ]
+          }
+        ]
+      },
+      "RandomForest": {
+        "metrics": {
+          "n": 16,
+          "correct": 15,
+          "matrix": [
+            [
+              4,
+              1,
+              0
+            ],
+            [
+              0,
+              7,
+              0
+            ],
+            [
+              0,
+              0,
+              4
+            ]
+          ],
+          "accuracy": 0.9375,
+          "kappa": 0.9024390243902439,
+          "macro_f1": 0.9407407407407407,
+          "balanced_accuracy": 0.9333333333333332,
+          "mae": 0.23625,
+          "rmse": 0.2933712096758417
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2"
+            ],
+            "test": [
+              "CS1_lec1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec1"
+            ],
+            "test": [
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 10,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 11,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 12,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 13,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 14,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.39,
+              0.61,
+              0.0
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.69,
+              0.31,
+              0.0
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.01,
+              0.27,
+              0.72
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 3,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.01,
+              0.39,
+              0.6
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.08,
+              0.82,
+              0.1
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.03,
+              0.81,
+              0.16
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.08,
+              0.68,
+              0.24
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.03,
+              0.23,
+              0.74
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 8,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.71,
+              0.25,
+              0.04
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 9,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.58,
+              0.37,
+              0.05
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 10,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.03,
+              0.32,
+              0.65
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 11,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.56,
+              0.44,
+              0.0
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 12,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.46,
+              0.53,
+              0.01
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 13,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.07,
+              0.73,
+              0.2
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 13,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.32,
+              0.6,
+              0.08
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 14,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.05,
+              0.58,
+              0.37
+            ]
+          }
+        ]
+      },
+      "MLP": {
+        "metrics": {
+          "n": 16,
+          "correct": 13,
+          "matrix": [
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              0,
+              6,
+              1
+            ],
+            [
+              0,
+              0,
+              4
+            ]
+          ],
+          "accuracy": 0.8125,
+          "kappa": 0.7090909090909091,
+          "macro_f1": 0.812962962962963,
+          "balanced_accuracy": 0.8190476190476191,
+          "mae": 0.1651711034851667,
+          "rmse": 0.3069024312082925
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2"
+            ],
+            "test": [
+              "CS1_lec1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec1"
+            ],
+            "test": [
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 3,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 4,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_3"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 5,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_4"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 6,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 6,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 7,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_10"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 8,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_17"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 9,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_10_31"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 10,
+            "train": [
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 7,
+              "low": 5,
+              "high": 3
+            }
+          },
+          {
+            "fold": 11,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 7,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 12,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_20"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          },
+          {
+            "fold": 13,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2"
+            ],
+            "shared_name_strings": 5,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 14,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_04_10"
+            ],
+            "shared_name_strings": 4,
+            "train_classes": {
+              "medium": 6,
+              "low": 5,
+              "high": 4
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.056961094712,
+              0.941947775327,
+              0.001091129961
+            ]
+          },
+          {
+            "record_id": "CS1_lec2",
+            "fold": 1,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.051317722245,
+              0.948336753369,
+              0.000345524386
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.000827811381,
+              0.066483762738,
+              0.932688425881
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 3,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.001628987345,
+              0.315822161951,
+              0.682548850704
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 4,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.004029504307,
+              0.947859884242,
+              0.048110611451
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 5,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.004780734613,
+              0.877339290092,
+              0.117879975295
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 6,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.014724930616,
+              0.969748021932,
+              0.015527047452
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 7,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.001137344844,
+              0.006500353186,
+              0.99236230197
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 8,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.930343161666,
+              0.069603066539,
+              5.3771795e-05
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 9,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.324056797801,
+              0.675832161693,
+              0.000111040506
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 10,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.001431194234,
+              0.325512029186,
+              0.67305677658
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 11,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.969155740571,
+              0.030705137357,
+              0.000139122073
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 12,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.287425840005,
+              0.712328070188,
+              0.000246089808
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 13,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.003783766781,
+              0.966112739717,
+              0.030103493502
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 13,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.810092617625,
+              0.125209233685,
+              0.06469814869
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 14,
+            "actual": "medium",
+            "predicted": "high",
+            "probabilities": [
+              0.001035626043,
+              0.254935339816,
+              0.744029034141
+            ]
+          }
+        ]
+      }
+    },
+    "leave_context_out": {
+      "ZeroR": {
+        "metrics": {
+          "n": 16,
+          "correct": 4,
+          "matrix": [
+            [
+              0,
+              5,
+              0
+            ],
+            [
+              3,
+              4,
+              0
+            ],
+            [
+              2,
+              2,
+              0
+            ]
+          ],
+          "accuracy": 0.25,
+          "kappa": -0.24675324675324675,
+          "macro_f1": 0.14814814814814814,
+          "balanced_accuracy": 0.19047619047619047,
+          "mae": 0.45392156862741667,
+          "rmse": 0.4932686617329648
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_2",
+              "hacksu_meeting_3",
+              "hacksu_meeting_4",
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "low": 5,
+              "medium": 4,
+              "high": 2
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_10",
+              "sci_meeting_10_10",
+              "sci_meeting_10_17",
+              "sci_meeting_10_31",
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 4,
+              "high": 2,
+              "low": 1
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec2",
+            "fold": 0,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.294117647059,
+              0.411764705882,
+              0.294117647059
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "low",
+            "probabilities": [
+              0.428571428571,
+              0.357142857143,
+              0.214285714286
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "low",
+            "probabilities": [
+              0.428571428571,
+              0.357142857143,
+              0.214285714286
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "low",
+            "probabilities": [
+              0.428571428571,
+              0.357142857143,
+              0.214285714286
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "low",
+            "probabilities": [
+              0.428571428571,
+              0.357142857143,
+              0.214285714286
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "low",
+            "probabilities": [
+              0.428571428571,
+              0.357142857143,
+              0.214285714286
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.5,
+              0.3
+            ]
+          }
+        ]
+      },
+      "Logistic": {
+        "metrics": {
+          "n": 16,
+          "correct": 10,
+          "matrix": [
+            [
+              1,
+              3,
+              1
+            ],
+            [
+              0,
+              6,
+              1
+            ],
+            [
+              0,
+              1,
+              3
+            ]
+          ],
+          "accuracy": 0.625,
+          "kappa": 0.40372670807453415,
+          "macro_f1": 0.5686274509803922,
+          "balanced_accuracy": 0.6023809523809524,
+          "mae": 0.3185485966353958,
+          "rmse": 0.428098598260796
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_2",
+              "hacksu_meeting_3",
+              "hacksu_meeting_4",
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "low": 5,
+              "medium": 4,
+              "high": 2
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_10",
+              "sci_meeting_10_10",
+              "sci_meeting_10_17",
+              "sci_meeting_10_31",
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 4,
+              "high": 2,
+              "low": 1
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec2",
+            "fold": 0,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.149066659696,
+              0.832109769949,
+              0.018823570355
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.032488235594,
+              0.924026201823,
+              0.043485562583
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.263975183372,
+              0.528391146958,
+              0.207633669669
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.160455028591,
+              0.590336277994,
+              0.249208693416
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.101632278079,
+              0.702204693667,
+              0.196163028254
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.096498535358,
+              0.404165032918,
+              0.499336431725
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "medium",
+            "probabilities": [
+              0.039583478394,
+              0.505897048452,
+              0.454519473153
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.034019390313,
+              0.263188649562,
+              0.702791960125
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.005778284307,
+              0.988516742581,
+              0.005704973112
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.574850922472,
+              0.395337688301,
+              0.029811389227
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.001020929515,
+              0.104900315755,
+              0.894078754729
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "high",
+            "probabilities": [
+              0.054406977973,
+              0.322339353948,
+              0.623253668079
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.027042643761,
+              0.618978368038,
+              0.353978988201
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "high",
+            "probabilities": [
+              0.169291186194,
+              0.331494366363,
+              0.499214447443
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.021060455179,
+              0.954558706214,
+              0.024380838607
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.264285259707,
+              0.679258337737,
+              0.056456402556
+            ]
+          }
+        ]
+      },
+      "RandomForest": {
+        "metrics": {
+          "n": 16,
+          "correct": 16,
+          "matrix": [
+            [
+              5,
+              0,
+              0
+            ],
+            [
+              0,
+              7,
+              0
+            ],
+            [
+              0,
+              0,
+              4
+            ]
+          ],
+          "accuracy": 1.0,
+          "kappa": 1.0,
+          "macro_f1": 1.0,
+          "balanced_accuracy": 1.0,
+          "mae": 0.26208333333333333,
+          "rmse": 0.3076591728953757
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_2",
+              "hacksu_meeting_3",
+              "hacksu_meeting_4",
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "low": 5,
+              "medium": 4,
+              "high": 2
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_10",
+              "sci_meeting_10_10",
+              "sci_meeting_10_17",
+              "sci_meeting_10_31",
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 4,
+              "high": 2,
+              "low": 1
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec2",
+            "fold": 0,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.79,
+              0.21,
+              0.0
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.38,
+              0.58,
+              0.04
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.2,
+              0.53,
+              0.27
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.1,
+              0.66,
+              0.24
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.19,
+              0.71,
+              0.1
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.09,
+              0.4,
+              0.51
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.11,
+              0.35,
+              0.54
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.0,
+              0.37,
+              0.63
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.48,
+              0.44,
+              0.08
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.52,
+              0.43,
+              0.05
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.01,
+              0.25,
+              0.74
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.08,
+              0.56,
+              0.36
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.01,
+              0.77,
+              0.22
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.52,
+              0.37,
+              0.11
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.33,
+              0.65,
+              0.02
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.52,
+              0.4,
+              0.08
+            ]
+          }
+        ]
+      },
+      "MLP": {
+        "metrics": {
+          "n": 16,
+          "correct": 13,
+          "matrix": [
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              0,
+              6,
+              1
+            ],
+            [
+              0,
+              0,
+              4
+            ]
+          ],
+          "accuracy": 0.8125,
+          "kappa": 0.7090909090909091,
+          "macro_f1": 0.812962962962963,
+          "balanced_accuracy": 0.8190476190476191,
+          "mae": 0.22261828543999998,
+          "rmse": 0.38440837879253265
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1"
+            ],
+            "test": [
+              "CS1_lec1",
+              "CS1_lec2"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "medium": 6,
+              "high": 4,
+              "low": 4
+            }
+          },
+          {
+            "fold": 1,
+            "train": [
+              "sci_meeting_11_21",
+              "sci_meeting_10_31",
+              "sci_meeting_10_17",
+              "sci_meeting_10_10",
+              "sci_meeting_04_10",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_03_20",
+              "sci_meeting_03_06",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "hacksu_meeting_1",
+              "hacksu_meeting_2",
+              "hacksu_meeting_3",
+              "hacksu_meeting_4",
+              "hacksu_meeting_5"
+            ],
+            "shared_name_strings": 1,
+            "train_classes": {
+              "low": 5,
+              "medium": 4,
+              "high": 2
+            }
+          },
+          {
+            "fold": 2,
+            "train": [
+              "hacksu_meeting_5",
+              "hacksu_meeting_4",
+              "hacksu_meeting_3",
+              "hacksu_meeting_2",
+              "hacksu_meeting_1",
+              "CS1_lec2",
+              "CS1_lec1"
+            ],
+            "test": [
+              "sci_meeting_03_06",
+              "sci_meeting_03_20",
+              "sci_meeting_04_03_p1",
+              "sci_meeting_04_03_p2",
+              "sci_meeting_04_10",
+              "sci_meeting_10_10",
+              "sci_meeting_10_17",
+              "sci_meeting_10_31",
+              "sci_meeting_11_21"
+            ],
+            "shared_name_strings": 2,
+            "train_classes": {
+              "medium": 4,
+              "high": 2,
+              "low": 1
+            }
+          }
+        ],
+        "predictions": [
+          {
+            "record_id": "CS1_lec2",
+            "fold": 0,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.059902634523,
+              0.939363429157,
+              0.000733936319
+            ]
+          },
+          {
+            "record_id": "CS1_lec1",
+            "fold": 0,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.010466219609,
+              0.987012868519,
+              0.002520911872
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_5",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.020734019371,
+              0.900802592414,
+              0.078463388215
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_4",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.007355498642,
+              0.699612212162,
+              0.293032289196
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_3",
+            "fold": 1,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.004952052007,
+              0.825415079177,
+              0.169632868816
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_2",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.002677443256,
+              0.06993307282,
+              0.927389483924
+            ]
+          },
+          {
+            "record_id": "hacksu_meeting_1",
+            "fold": 1,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.001729900364,
+              0.16094235738,
+              0.837327742256
+            ]
+          },
+          {
+            "record_id": "sci_meeting_11_21",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.019543417158,
+              0.017428704201,
+              0.963027878641
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_31",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "medium",
+            "probabilities": [
+              0.017307312084,
+              0.980503205431,
+              0.002189482485
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_17",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.647605320328,
+              0.351359656623,
+              0.001035023049
+            ]
+          },
+          {
+            "record_id": "sci_meeting_10_10",
+            "fold": 2,
+            "actual": "high",
+            "predicted": "high",
+            "probabilities": [
+              0.000710681108,
+              0.051957432329,
+              0.947331886564
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_10",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "high",
+            "probabilities": [
+              0.005854912218,
+              0.025025312166,
+              0.969119775616
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p2",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.003113199823,
+              0.521849834074,
+              0.475036966103
+            ]
+          },
+          {
+            "record_id": "sci_meeting_04_03_p1",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.791735712167,
+              0.029818714668,
+              0.178445573166
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_20",
+            "fold": 2,
+            "actual": "medium",
+            "predicted": "medium",
+            "probabilities": [
+              0.041242120264,
+              0.956744968343,
+              0.002012911394
+            ]
+          },
+          {
+            "record_id": "sci_meeting_03_06",
+            "fold": 2,
+            "actual": "low",
+            "predicted": "low",
+            "probabilities": [
+              0.549070312099,
+              0.450244072857,
+              0.000685615044
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

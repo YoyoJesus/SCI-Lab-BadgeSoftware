@@ -99,7 +99,8 @@
     ],
     "balanced_accuracy": 0.41059455929881716,
     "macro_f1": 0.41160851542342985,
-    "local_verification": "Exact matrix reconstruction from comparison_20260304_103134; same recorded interval as hacksu_meeting_3. 1445 multi-active bins resolved by row count. Unknown mapped to inactive; duplicate weighting retained."
+    "local_verification": "Exact matrix reconstruction from comparison_20260304_103134; same recorded interval as hacksu_meeting_3. 1445 multi-active bins resolved by row count. Unknown mapped to inactive; duplicate weighting retained.",
+    "qualification": "Historical reference labels map unannotated time to no-speaker and collapse overlap; the 50.70% agreement is not validated speaker accuracy."
   },
   "initial_binary": {
     "source": "Smart Badge - Feb 6.pptx, slide 11",
@@ -144,7 +145,7 @@
       "fn": 31992
     },
     "recovered_joined_rows": 272196,
-    "qualification": "Unknown manual labels are mapped to inactive; duplicate keys produce a many-to-many join. These are historical agreement counts, not independent fully annotated observations."
+    "qualification": "Historical coding arithmetic only. Author confirms unknown means never annotated. Duplicate-key joins inflate row totals; reported accuracy, precision, and specificity are not validated negative-class performance. See annotation_validation.json for the new unique-key positive-only analysis."
   },
   "ten_meeting_naive_bayes": {
     "source": "Smart Badge - April 3.pptx, slide 13",

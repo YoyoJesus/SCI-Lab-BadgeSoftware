@@ -1,0 +1,286 @@
+{
+  "purpose": "Recompute the existing extractor on saved auto-labeled inputs, using unchanged defaults. This does not validate automatic speaker labels or authenticate deployed firmware.",
+  "parameters": {
+    "min_turn_bins": 2,
+    "window_minutes": 5.0,
+    "absolute_tolerance": 1e-10,
+    "relative_tolerance": 1e-08
+  },
+  "extractor_sha256": "3e8d72844a9e895caf2c44bab7012fb2e45e17f0beab798b0c0bdd263a212dd3",
+  "records": [
+    {
+      "record_id": "sci_meeting_11_21",
+      "input_rows": 215950,
+      "duplicate_badge_timestamp_keys": 6334,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 14.869723540469836,
+      "unique_timestamp_rate_hz_max": 16.88838970089186,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_10_31",
+      "input_rows": 161240,
+      "duplicate_badge_timestamp_keys": 8151,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 15.918831975396767,
+      "unique_timestamp_rate_hz_max": 16.122986513445046,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_10_17",
+      "input_rows": 213636,
+      "duplicate_badge_timestamp_keys": 14436,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 15.648990421386857,
+      "unique_timestamp_rate_hz_max": 15.853028434676538,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_10_10",
+      "input_rows": 58450,
+      "duplicate_badge_timestamp_keys": 12335,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 13.24247011369145,
+      "unique_timestamp_rate_hz_max": 13.319318293283866,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_04_10",
+      "input_rows": 159954,
+      "duplicate_badge_timestamp_keys": 8088,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 15.546280414137824,
+      "unique_timestamp_rate_hz_max": 16.199176490352766,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_04_03_p2",
+      "input_rows": 167403,
+      "duplicate_badge_timestamp_keys": 212,
+      "missing_global_half_second_bins": 1,
+      "unique_timestamp_rate_hz_min": 16.84162305579954,
+      "unique_timestamp_rate_hz_max": 16.893081976843362,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_04_03_p1",
+      "input_rows": 158863,
+      "duplicate_badge_timestamp_keys": 5239,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 16.028462421805727,
+      "unique_timestamp_rate_hz_max": 16.478454933430914,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_03_20",
+      "input_rows": 226076,
+      "duplicate_badge_timestamp_keys": 3245,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 16.306826947920985,
+      "unique_timestamp_rate_hz_max": 16.689379121046603,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "sci_meeting_03_06",
+      "input_rows": 313695,
+      "duplicate_badge_timestamp_keys": 16176,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 15.791600843647588,
+      "unique_timestamp_rate_hz_max": 16.155409422225286,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "hacksu_meeting_5",
+      "input_rows": 330872,
+      "duplicate_badge_timestamp_keys": 1040,
+      "missing_global_half_second_bins": 8,
+      "unique_timestamp_rate_hz_min": 16.775082690187432,
+      "unique_timestamp_rate_hz_max": 16.871480323496357,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "hacksu_meeting_4",
+      "input_rows": 294790,
+      "duplicate_badge_timestamp_keys": 2867,
+      "missing_global_half_second_bins": 2,
+      "unique_timestamp_rate_hz_min": 15.712988192552224,
+      "unique_timestamp_rate_hz_max": 16.792025099549342,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "hacksu_meeting_3",
+      "input_rows": 272096,
+      "duplicate_badge_timestamp_keys": 2479,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 16.61526479286857,
+      "unique_timestamp_rate_hz_max": 16.811850614113766,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "hacksu_meeting_2",
+      "input_rows": 279104,
+      "duplicate_badge_timestamp_keys": 2207,
+      "missing_global_half_second_bins": 10,
+      "unique_timestamp_rate_hz_min": 16.636562514275603,
+      "unique_timestamp_rate_hz_max": 16.796817071149974,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "hacksu_meeting_1",
+      "input_rows": 270534,
+      "duplicate_badge_timestamp_keys": 8692,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 16.211185125951115,
+      "unique_timestamp_rate_hz_max": 16.50951699980598,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "CS1_lec2",
+      "input_rows": 320787,
+      "duplicate_badge_timestamp_keys": 5213,
+      "missing_global_half_second_bins": 1,
+      "unique_timestamp_rate_hz_min": 16.247031834576134,
+      "unique_timestamp_rate_hz_max": 16.716175378253464,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    },
+    {
+      "record_id": "CS1_lec1",
+      "input_rows": 455129,
+      "duplicate_badge_timestamp_keys": 4936,
+      "missing_global_half_second_bins": 0,
+      "unique_timestamp_rate_hz_min": 15.611569140711312,
+      "unique_timestamp_rate_hz_max": 16.632434690219373,
+      "table_mismatches": {
+        "meeting_features": [],
+        "participant_features": [],
+        "window_features": []
+      }
+    }
+  ],
+  "source_sha256": {
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_11_21.csv": "c27596a7c0ddd8a7b6275d24f46d2b258f2405481dc1601dc6cb67c5e763e947",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_11_21/meeting_features.csv": "9f5dc7efbdba2a122310cba1ecfda6e70ad2d016a2e29a21a4f211c8994d4a7b",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_11_21/participant_features.csv": "2d170ea5670b5c76f0a7a5af7479a3918d79c3ab2bdec3187b3a5d8c5edbdd53",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_11_21/window_features.csv": "5aeee8b8ee5ddb997b2f5b76226e13efde1ef5f0f882c47ffa7f470ebb92cf0a",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_10_31.csv": "70f7d19468b9607c955c379bc24923550eb3ec1fc7a98bdb9dfda51243ed66df",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_31/meeting_features.csv": "a5da40ec8d42d1a553bbf8b2863d5569510386a03d18c0bb5ebe6c90551d834d",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_31/participant_features.csv": "5dea5698a79d2668ae2c91f823370e9492aea5cc97d7206ed0e4b805a198207b",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_31/window_features.csv": "0ee033ebce97ed9e28eaa2ed271a12d979e33d0e4e5a35194d2f3b7b6d24e2a1",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_10_17.csv": "d40503345c58a71f5a23acee163b0465279843fcf1f1f2962559c465ef8e72bf",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_17/meeting_features.csv": "5a601befca4c631ee5facc8d869270a7b99490c682570dfc4929b91b3bcd19c3",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_17/participant_features.csv": "c486a54c48525e1a868137667037dae07e923d556a40143daedb9048214e6584",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_17/window_features.csv": "b09ecf80e2e609a8094e9a749d9ea8573bd6ee66ea3506fdfed4eb82a480b9fa",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_10_10.csv": "20cad7e7b472d44631aafa85116f87c89482f190aaa7c0c511d314563a02239c",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_10/meeting_features.csv": "1bea05b063b256b5bd5ba2e7f4ece41a6968799c13465586793a707c2bbc1df2",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_10/participant_features.csv": "9c135b05ee79773e7b8e74660498d68e1dd31ee8188fc812580d37e421eff48a",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_10/window_features.csv": "966df49b7eb7a876d4cfa7f0f0e244704471bb92995b881d4fe395bc9cdbe71d",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_04_10.csv": "0d71d64feb249d27405819cb65dd3c1e2937f210e96c4957bd619be991e725a1",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_10/meeting_features.csv": "3af540c21befb4cbeba840db75bfca366432564a3d851b95d0b03035e31b47d9",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_10/participant_features.csv": "0ee2e4f1f0f97fe06c580dc165ee4638b536ebd0106ce6b739836a6c6e9229a3",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_10/window_features.csv": "204a9553f3dce4b9c19f0bb4216b670c1003704b2a493b8f7c32236d4d5feb93",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_04_03_p2.csv": "4fe82cda3908cd863b4d0c50459166193e4a5df1f3b714049ac823812c8e9c8a",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p2/meeting_features.csv": "57f08fbba5e44df5638dfc17edd4513d4ab6dd70872164825d3f3bf5fdd5b250",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p2/participant_features.csv": "64558c9f674ce9c7734fc0727f229fb325695710cb85bfa97dbeb0e4c5ac42a4",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p2/window_features.csv": "cc2a940468f25922d0412dfb34dac74c700ccd696847280a4a8c53df296233cf",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_04_03_p1.csv": "0ea11a8de17f83644ed8f2bd5ac2cc47958b19c2b3db077171c2a4f73f1ce2b2",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p1/meeting_features.csv": "9fbf1591b6ad531c61c7dd2da794f0d3cb350b10358a66324c921996e9173628",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p1/participant_features.csv": "d1b1a7a58bc88894835c1d57da9b7e26ff56e0bb62c55b132a8bc5104349c547",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p1/window_features.csv": "3caeb2937789a54819f8aba39f08f9aa9a0e29722126dcddc8561fe8d5152522",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_03_20.csv": "8006e1934e2f8a2664b07f96337eec5a65cd60753ebf515070e52c7fb8e8f1ce",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_20/meeting_features.csv": "f13756dd0df22f9aefaef48d536354c1cd35b5419da0c24ff6f98205713be416",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_20/participant_features.csv": "2285f5b5054f94d229af5c0bd7c422b1a0e249b4621e604012a69e5223444779",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_20/window_features.csv": "41c645f89be11d8b8d4c0384a277af8dd82fc711e54832be7d75aaaadf77b668",
+    "Data Cleanup and Normalization/processed_data/auto_label/sci_meeting_03_06.csv": "66a3c0ff613f850cb2e249f7c596c35e73092dcc3704e2a6adff458d85a2470f",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_06/meeting_features.csv": "e88dd5cd0d0539f5fe86edec35d00bfd172949fc81af9bcabbc8e10d3d75fb82",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_06/participant_features.csv": "9a57aff35542aed090919124075339329855548babc1bf029a8e522cc4c5761b",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_06/window_features.csv": "f04a2715858ad3c00b5aeca59510b75a08c283083a55ddf218b8a32b4c26825e",
+    "Data Cleanup and Normalization/processed_data/auto_label/hacksu_meeting_5.csv": "fed69987e5808c52aaf5191aa03386bc2420effac521cac61e30c20f135b6632",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_5/meeting_features.csv": "6ed7a7b923ac88ad3d83b64014729c5f08861c35f62bbb4dbd236a090cbfed9c",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_5/participant_features.csv": "a7bbd43c26080a6d3bd2d7dc51945e247cee2997f6d0bbb0194fb4bde013e2b0",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_5/window_features.csv": "e21f9f2ae35b72831946a7f3673a558983dde9e557ecaadabcbc306e59023add",
+    "Data Cleanup and Normalization/processed_data/auto_label/hacksu_meeting_4.csv": "5b7c370b14763fc0ea30b8050b037161f8ba3de13a96da2682bf4d2874400cc8",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_4/meeting_features.csv": "8b8af53c81803a60f10ca59ebe61a412acbe426dcd9f8f53aceb225d9f04ecd3",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_4/participant_features.csv": "b3285326238d54881dcf1fef5011c39084cc6e539319db6a01922eed69c73fbd",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_4/window_features.csv": "e07d4e441b5e353e88efe29f53acbbf53477f2da7d400964bddddac35799c00e",
+    "Data Cleanup and Normalization/processed_data/auto_label/hacksu_meeting_3.csv": "fa43244d6504a69075c8472f29497e942b35d6bbf4d5d5ec9ba5c643c1edf836",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_3/meeting_features.csv": "f3291ccd3e14e127a0445798f4fccad53a5501cd721ca1e49a47dadf8bd81384",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_3/participant_features.csv": "e2339e81bba3d631755df5074d445ffed6b51685545b630177f786d30482e026",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_3/window_features.csv": "49de8ac09d7160f66d7401b7d64693cd73b7cb2214fd67b410b19b849bbd93e4",
+    "Data Cleanup and Normalization/processed_data/auto_label/hacksu_meeting_2.csv": "74bd0bb9962fb833f025e0cca58be69f81c189b2bec6f903da493ca9094e80af",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_2/meeting_features.csv": "edaff07d7aa657c334ea227406c8c932df03c80179ed41b1c135a5da5de28325",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_2/participant_features.csv": "8dd7d5d9d3a11a31845c1b89cfcd34760b68c2598536023623f18fefa7770410",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_2/window_features.csv": "127ee3010770a796d78f74fec542b7b6264b4360487020c074776bb23a8dd478",
+    "Data Cleanup and Normalization/processed_data/auto_label/hacksu_meeting_1.csv": "99f401fb63ee3846dc1c37e6cfe491082be7295543d405752919ac9a279ba286",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_1/meeting_features.csv": "931d2106f886e619ecaf6e396c7c2f1547c82b240f17fe39c35883b3742f3ff6",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_1/participant_features.csv": "8acc25c3f9d05a9566d125289a2b32ea53416ae12f9f173ea45a7c8e829d1e3b",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_1/window_features.csv": "4e64f034c87e2531d76cceb0d0f9bb1fd8025b8587ea1389fada08c3829ff6fa",
+    "Data Cleanup and Normalization/processed_data/auto_label/CS1_lec2.csv": "bedad22d8d520e4c4a0c7126ab0f920f94db29d7d58aaed3a8a33b628d15d420",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec2/meeting_features.csv": "8db7cd248cc6bbc71da5e0d580e54dd87cfd2652aa755f241c124c3785b81122",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec2/participant_features.csv": "3860357d7d53e673394c452f0a1fd5c907f66304c825ba8d61e7ae34e48343ef",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec2/window_features.csv": "38a80b659acec2d6d6bc922492a69f1fa69549ef5660770abe802b331882d541",
+    "Data Cleanup and Normalization/processed_data/auto_label/CS1_lec1.csv": "5b73acb9a55af71b6ab8ddaa76bc42a2d3fc97b7945a89c36499f913c8969b4c",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec1/meeting_features.csv": "d8eb17a66e68da069b41e74adf8d250985a596019f855b51b17843b628d02276",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec1/participant_features.csv": "ba514925b47f1d4995a17f99d6ba611a5d56a7637cffb5e465394c0d7b1598b1",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec1/window_features.csv": "c16228844fd8d80c15c8b8bb6f777587b0afb29076b04d7c78b7cad2139a892d"
+  }
+}

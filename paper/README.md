@@ -19,7 +19,7 @@ Files:
 - `derived_metrics.json` :  arithmetic reconstructed from the supplied poster's matrices.
 - `supplementary_evaluations.json` :  presentation experiment counts and derived metrics.
 
-The manuscript is a feasibility-study manuscript. Author queries and submission requirements are in `author_notes.md`; they are excluded from the typeset paper. Model performance was transcribed from the linked poster and supplied presentations; no classifiers were retrained. Recovered local data now verify the exported inputs and the saved speaker-comparison counts, with provenance and limitations recorded in `local_data_audit.json` and `author_notes.md`.
+The manuscript is a venue-neutral feasibility study. Recovered local inputs reproduce all saved feature tables and exported predictors. Recovered WEKA option strings reproduce both reported classifier summaries under an explicit 10-fold seed-1 reconstruction. New baselines and session/context sensitivity checks are identified separately. Author-confirmed label provenance, incomplete speaker annotation, consent, absence of ethics review, funding, and contributions are documented in `author_notes.md` and `author_confirmations.json`.
 
 ## Optional export tools
 
@@ -29,4 +29,15 @@ The manuscript is a feasibility-study manuscript. Author queries and submission 
 
 ## Audit recovered local data
 
-`python paper/audit_local_data.py` checks the CSV/ARFF, reconstructs all 36 exported features for each of 16 records from the saved tables, and reconstructs the original speaker comparison from the manual and automatic files. It requires NumPy and pandas; it does not train classifiers or alter input data. Use `--data-root PATH` if the ignored data folders live in another checkout. The resulting `local_data_audit.json` records source hashes, sample composition, and annotation/alignment limitations. It deliberately omits participant names. The original classifier settings and folds remain unavailable, so historical classification scores are not described as reproduced.
+`python paper/audit_local_data.py` checks the CSV/ARFF, reconstructs all 36 exported features for each of 16 records from the saved tables, and reconstructs the original speaker comparison from the manual and automatic files. It requires NumPy and pandas; it does not train classifiers or alter input data. Use `--data-root PATH` if the ignored data folders live in another checkout. The resulting `local_data_audit.json` records source hashes, sample composition, and annotation/alignment limitations. It deliberately omits participant names. The original feature audit remains a record of historical counts; it does not treat unannotated time as verified silence. The additional analyses below address annotation validity and classifier reproduction.
+
+## Additional reproducibility checks
+
+```text
+python paper/audit_feature_sources.py
+python paper/validate_annotations.py
+python paper/evaluate_weka.py
+python paper/test_validation.py
+```
+
+The source audit recomputes features in memory and writes `feature_source_audit.json`. The annotation validator preserves unknown labels and writes `annotation_validation.json`. The WEKA runner writes `weka_evaluation.json`, including settings, folds, predictions, probabilities, source hashes, and runtime versions; it defaults to `C:/Program Files/Weka-3-8-6` and accepts `--weka-home`, `--java`, `--historical-log`, and `--data-root`. Its temporary split files and command output are ignored under `paper/.tools/`. None of these scripts overwrites the original sensor data or feature tables. The historical fold seed is not logged; seed 1 is a reconstruction assumption that matches the reported summaries. These checks do not establish independent effectiveness or speaker-accuracy validation.
