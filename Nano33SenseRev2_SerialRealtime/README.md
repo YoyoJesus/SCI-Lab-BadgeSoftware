@@ -11,17 +11,22 @@ This folder is self-contained: it has Rev2 firmware and a Windows live-data dash
 - USB serial streams continuously; a BLE connection is no longer required.
 - BLE Nordic UART streaming is retained as an optional second output.
 - The sample rate is adjustable at runtime from 1–200 Hz.
-- Sampling and sending are independent. Samples are taken on a microsecond
-  schedule into a 512-sample buffer. The buffer is sent at a chosen interval
-  (0–5000 ms), or after every sample.
+- Sampling and sending are independent. A high-priority thread, woken by a
+  microsecond timer, samples into a 512-sample buffer. The buffer is sent at a
+  chosen interval (0–5000 ms), or after every sample. Because sampling runs in
+  its own thread, the BLE stack and slow output cannot delay it.
 - Slow sensors (GSR, magnetometer, environment, light, gesture, RSSI) are polled
   in the background without blocking. Every sample carries their latest value, so
-  only the accelerometer and gyroscope are read at the full sample rate.
+  only the accelerometer and gyroscope are read at the full sample rate. Both are
+  read in one I²C transfer, with the BMI270's advanced power save turned off.
 - The I²C bus runs at 400 kHz. When the rate is above 100 Hz, the BMI270
   accelerometer/gyroscope data rate is raised from 100 Hz to 200 Hz.
 - The microphone calculation uses RMS without overflowing a 32-bit accumulator.
 - Serial output is fixed-column CSV so the viewer can parse it reliably. Each row
   ends with a sequence number, so dropped samples can be detected.
+- BLE sends the same samples as compact binary packets (about 18 bytes per
+  sample instead of about 115), so 100 Hz and 200 Hz fit over BLE. The firmware
+  also asks the computer for a 7.5–15 ms connection interval.
 
 ## Upload in Arduino IDE
 
@@ -58,8 +63,8 @@ For wireless use, leave the board powered by USB or a battery, select **Bluetoot
 - **Device sample rate** sets how often the board samples (1–200 Hz).
 - **Send every (ms)** sets how often the board sends its buffered samples.
   Use `0` to send each sample as soon as it is taken. Longer intervals send
-  samples in bursts, which helps BLE keep up. Every sample keeps its own
-  timestamp, so batching does not reduce resolution. Set both controls, then click **Apply**.
+  samples in bursts. Every sample keeps its own timestamp, so batching does not
+  reduce resolution. Set both controls, then click **Apply**.
   The viewer also applies both settings when it connects.
 - **Plot refresh** changes how often the computer redraws the graphs (1–30 Hz). Serial data is still drained continuously so the port does not back up.
 - **Visible seconds** controls the time window. Long windows at high rates are
@@ -71,20 +76,24 @@ For wireless use, leave the board powered by USB or a battery, select **Bluetoot
   The viewer includes individual motion axes, vector magnitudes, estimated altitude
   derived from pressure, RGB/ambient light, gesture direction, and the other raw fields.
 
-BLE notifications use the same `DATA,...` rows as USB, so graphing, chart selection,
-and CSV recording behave identically on both transports. Each notification carries
-as many complete newline-separated rows as fit in 220 bytes.
+BLE notifications carry binary packets of up to 11 samples (244 bytes). The viewer
+unpacks them into the same fields as USB `DATA,...` rows, so graphing, chart selection,
+and CSV recording behave identically on both transports. Over BLE, a partly filled
+packet is held for up to 40 ms, so `SEND 0` still sends several samples per
+notification. Packet values are rounded to 0.001 g, 0.0625 dps, 0.1 µT, 0.01 °C,
+0.01 %RH, and 1 Pa.
 
 ### Choosing high rates
 
-- USB handles 200 Hz comfortably. Use USB for 100 Hz and faster.
-- BLE throughput depends on the computer's Bluetooth adapter and radio
-  conditions. If the dropped count rises, lower the rate or increase the send interval.
+- USB and BLE both handle 200 Hz. In testing on Windows, BLE ran 100 Hz for two
+  minutes and 200 Hz for 20 seconds with no missing samples.
+- BLE throughput still depends on the computer's Bluetooth adapter and radio
+  conditions. If the dropped count rises, move closer or lower the rate.
 - GSR is sampled at about 22 Hz, and magnetometer, pressure, and light update
   at 10–50 Hz. At higher rates these columns repeat their latest value. Sound is
   RMS over roughly 8 ms blocks of microphone audio.
 - The buffer holds 512 samples. At 200 Hz that is about 2.5 s, so a longer send
-  interval sends early when the buffer fills.
+  interval sends early once the buffer is three-quarters full.
 
 The baud setting is 115200. On this board's native USB serial connection it is a compatibility value; sample rate and plot refresh are the meaningful speed controls.
 
@@ -110,5 +119,10 @@ DATA,time_ms,sound,ax,ay,az,gx,gy,gz,mx,my,mz,temp_c,humidity_pct,pressure_kpa,
 
 `time_ms` is the time the sample was taken, not when it was sent. The viewer
 still reads rows from older firmware without `seq`.
+
+Over BLE, the same commands go to the RX characteristic. Replies are
+newline-terminated text; samples arrive as binary packets starting with byte
+`0x01`. The packet layout is documented at the top of the firmware sketch. The
+viewer also still reads the text rows that older firmware sent over BLE.
 
 Gesture values are `-1=none`, `0=up`, `1=down`, `2=left`, and `3=right`.

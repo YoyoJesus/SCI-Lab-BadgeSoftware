@@ -6,6 +6,7 @@ import asyncio
 import csv
 import math
 import queue
+import struct
 import threading
 import time
 from collections import deque
@@ -96,6 +97,10 @@ def parse_data_line(line: str) -> dict[str, float]:
             sample[name] = math.nan
     for name in FIELDS:
         sample.setdefault(name, math.nan)
+    return add_derived_fields(sample)
+
+
+def add_derived_fields(sample: dict[str, float]) -> dict[str, float]:
     sample["accel_mag"] = math.sqrt(
         sample["ax"] ** 2 + sample["ay"] ** 2 + sample["az"] ** 2
     )
@@ -112,6 +117,50 @@ def parse_data_line(line: str) -> dict[str, float]:
         else math.nan
     )
     return sample
+
+
+BLE_PACKET_TYPE = 0x01
+BLE_HEADER = struct.Struct("<BBII3hhHIB4HbBb")
+BLE_SAMPLE = struct.Struct("<3H6h")
+
+
+def _signed(raw: int, scale: float) -> float:
+    return math.nan if raw == -0x8000 else raw / scale
+
+
+def _unsigned(raw: int, scale: float, missing: int) -> float:
+    return math.nan if raw == missing else raw / scale
+
+
+def parse_ble_packet(data: bytes) -> list[dict[str, float]]:
+    """Unpack one binary BLE notification into DATA-equivalent samples."""
+    if len(data) < BLE_HEADER.size or data[0] != BLE_PACKET_TYPE:
+        raise ValueError("not a binary data packet")
+    (_, count, seq0, time0, mx, my, mz, temp, humidity, pressure,
+     proximity, red, green, blue, ambient, gesture, gsr, rssi) = BLE_HEADER.unpack_from(data)
+    if len(data) != BLE_HEADER.size + count * BLE_SAMPLE.size:
+        raise ValueError(f"packet length {len(data)} does not match {count} samples")
+    slow = {
+        "mx": _signed(mx, 10), "my": _signed(my, 10), "mz": _signed(mz, 10),
+        "temp_c": _signed(temp, 100),
+        "humidity_pct": _unsigned(humidity, 100, 0xFFFF),
+        "pressure_kpa": _unsigned(pressure, 1000, 0xFFFFFFFF),
+        "proximity": proximity, "red": red, "green": green, "blue": blue, "ambient": ambient,
+        "gesture": gesture, "gsr": gsr, "rssi": rssi,
+    }
+    samples = []
+    for offset in range(BLE_HEADER.size, len(data), BLE_SAMPLE.size):
+        dt, dseq, sound, ax, ay, az, gx, gy, gz = BLE_SAMPLE.unpack_from(data, offset)
+        sample = dict(slow)
+        sample.update(
+            time_ms=time0 + dt, seq=seq0 + dseq, sound=sound,
+            ax=_signed(ax, 1000), ay=_signed(ay, 1000), az=_signed(az, 1000),
+            gx=_signed(gx, 16), gy=_signed(gy, 16), gz=_signed(gz, 16),
+        )
+        samples.append(add_derived_fields(sample))
+        # A gesture is an event, so only the first sample in a packet carries it.
+        slow["gesture"] = -1
+    return samples
 
 
 def available_ports() -> list[str]:
@@ -427,7 +476,15 @@ class BadgeViewer(tk.Tk):
                 await client.stop_notify(NUS_TX_UUID)
 
     def on_ble_notification(self, _characteristic, data: bytearray) -> None:
-        # Each notification holds one or more complete newline-separated lines.
+        if data and data[0] == BLE_PACKET_TYPE:
+            try:
+                for sample in parse_ble_packet(bytes(data)):
+                    self.inbox.put(("sample", sample))
+            except (ValueError, struct.error) as exc:
+                self.inbox.put(("message", f"Ignored malformed BLE packet: {exc}"))
+            return
+        # Text notifications (replies, older firmware's DATA rows) hold one or
+        # more complete newline-separated lines.
         text = bytes(data).decode("utf-8", errors="replace")
         for line in text.splitlines():
             line = line.strip("\x00 ")
