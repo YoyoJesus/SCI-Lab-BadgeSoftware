@@ -28,10 +28,21 @@ from serial.tools import list_ports
 FIELDS = [
     "time_ms", "sound", "ax", "ay", "az", "gx", "gy", "gz",
     "mx", "my", "mz", "temp_c", "humidity_pct", "pressure_kpa",
-    "proximity", "red", "green", "blue", "ambient", "gesture", "gsr", "rssi",
+    "proximity", "red", "green", "blue", "ambient", "gesture", "gsr", "rssi", "seq",
 ]
 
-LEGACY_FIELDS = [field for field in FIELDS if field not in {"ambient", "gesture"}]
+# Firmware before the high-rate sampler did not send seq; the original
+# firmware also lacked ambient and gesture.
+UNSEQUENCED_FIELDS = FIELDS[:-1]
+LEGACY_FIELDS = [field for field in UNSEQUENCED_FIELDS if field not in {"ambient", "gesture"}]
+KNOWN_LAYOUTS = {len(layout): layout for layout in (FIELDS, UNSEQUENCED_FIELDS, LEGACY_FIELDS)}
+
+MAX_RATE_HZ = 200
+MAX_SEND_INTERVAL_MS = 5000
+MAX_WINDOW_SECONDS = 300
+# Lines are decimated to about this many points so drawing stays fast at high
+# sample rates; CSV recording always keeps every sample.
+MAX_PLOT_POINTS = 2000
 
 NUS_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 NUS_TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -73,14 +84,10 @@ def parse_data_line(line: str) -> dict[str, float]:
     if not line.startswith("DATA,"):
         raise ValueError("not a DATA line")
     parts = line.split(",")[1:]
-    if len(parts) == len(FIELDS):
-        field_names = FIELDS
-    elif len(parts) == len(LEGACY_FIELDS):
-        field_names = LEGACY_FIELDS
-    else:
-        raise ValueError(
-            f"expected {len(FIELDS)} fields (or {len(LEGACY_FIELDS)} legacy), received {len(parts)}"
-        )
+    field_names = KNOWN_LAYOUTS.get(len(parts))
+    if field_names is None:
+        expected = ", ".join(str(count) for count in sorted(KNOWN_LAYOUTS, reverse=True))
+        raise ValueError(f"expected {expected} fields, received {len(parts)}")
     sample: dict[str, float] = {}
     for name, value in zip(field_names, parts):
         try:
@@ -120,6 +127,18 @@ def available_ports() -> list[str]:
     return [f"{p.device} — {p.description}" for p in ports]
 
 
+def first_index_at_or_after(samples: list[dict[str, float]], time_ms: float) -> int:
+    """Binary search time-ordered samples for the first one at or after time_ms."""
+    low, high = 0, len(samples)
+    while low < high:
+        middle = (low + high) // 2
+        if samples[middle]["time_ms"] < time_ms:
+            low = middle + 1
+        else:
+            high = middle
+    return low
+
+
 class BadgeViewer(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
@@ -136,7 +155,8 @@ class BadgeViewer(tk.Tk):
         self.ble_thread: threading.Thread | None = None
         self.stop_ble = threading.Event()
         self.inbox: queue.Queue[tuple[str, object]] = queue.Queue()
-        self.history: deque[dict[str, float]] = deque(maxlen=6000)
+        self.history: deque[dict[str, float]] = deque(maxlen=MAX_RATE_HZ * MAX_WINDOW_SECONDS)
+        self.recent_times: deque[float] = deque()
         self.lines: dict[str, object] = {}
         self.axes: list[object] = []
         self.plot_vars: dict[str, tk.BooleanVar] = {}
@@ -144,12 +164,15 @@ class BadgeViewer(tk.Tk):
         self.csv_writer = None
         self.last_draw = 0.0
         self.samples_received = 0
+        self.samples_dropped = 0
+        self.last_seq: float | None = None
         self.last_sample_wall = 0.0
 
         self.transport_var = tk.StringVar(value=TRANSPORT_USB)
         self.endpoint_var = tk.StringVar()
         self.status_var = tk.StringVar(value="Disconnected")
-        self.rate_var = tk.IntVar(value=10)
+        self.rate_var = tk.IntVar(value=100)
+        self.send_interval_var = tk.IntVar(value=50)
         self.refresh_var = tk.IntVar(value=10)
         self.window_var = tk.DoubleVar(value=30.0)
         self.record_var = tk.StringVar(value="Not recording")
@@ -185,27 +208,33 @@ class BadgeViewer(tk.Tk):
         self.connect_button = ttk.Button(controls, text="Connect", command=self.toggle_connection)
         self.connect_button.grid(row=1, column=3, padx=5)
 
-        ttk.Label(controls, text="Device send rate (Hz)").grid(row=0, column=4, padx=(20, 0), sticky="w")
-        rate = ttk.Scale(controls, from_=1, to=25, variable=self.rate_var, command=self._rate_changed)
+        ttk.Label(controls, text="Device sample rate (Hz)").grid(row=0, column=4, padx=(20, 0), sticky="w")
+        rate = ttk.Scale(controls, from_=1, to=MAX_RATE_HZ, variable=self.rate_var, command=self._rate_changed)
         rate.grid(row=1, column=4, padx=(20, 4), sticky="ew")
-        self.rate_label = ttk.Label(controls, text="10 Hz", width=7)
+        self.rate_label = ttk.Label(controls, text=f"{self.rate_var.get()} Hz", width=7)
         self.rate_label.grid(row=1, column=5)
+
+        ttk.Label(controls, text="Send every (ms)").grid(row=0, column=6, padx=(10, 0), sticky="w")
+        ttk.Spinbox(
+            controls, from_=0, to=MAX_SEND_INTERVAL_MS, increment=10,
+            textvariable=self.send_interval_var, width=7,
+        ).grid(row=1, column=6, padx=(10, 4))
         self.apply_rate_button = ttk.Button(controls, text="Apply", command=self.apply_device_rate)
-        self.apply_rate_button.grid(row=1, column=6, padx=5)
+        self.apply_rate_button.grid(row=1, column=7, padx=5)
 
-        ttk.Label(controls, text="Plot refresh (Hz)").grid(row=0, column=7, padx=(20, 0), sticky="w")
+        ttk.Label(controls, text="Plot refresh (Hz)").grid(row=0, column=8, padx=(20, 0), sticky="w")
         refresh = ttk.Scale(controls, from_=1, to=30, variable=self.refresh_var, command=self._refresh_changed)
-        refresh.grid(row=1, column=7, padx=(20, 4), sticky="ew")
+        refresh.grid(row=1, column=8, padx=(20, 4), sticky="ew")
         self.refresh_label = ttk.Label(controls, text="10 Hz", width=7)
-        self.refresh_label.grid(row=1, column=8)
+        self.refresh_label.grid(row=1, column=9)
 
-        ttk.Label(controls, text="Visible seconds").grid(row=0, column=9, padx=(20, 0), sticky="w")
-        ttk.Spinbox(controls, from_=5, to=300, increment=5, textvariable=self.window_var, width=7).grid(
-            row=1, column=9, padx=(20, 5)
-        )
+        ttk.Label(controls, text="Visible seconds").grid(row=0, column=10, padx=(20, 0), sticky="w")
+        ttk.Spinbox(
+            controls, from_=5, to=MAX_WINDOW_SECONDS, increment=5, textvariable=self.window_var, width=7
+        ).grid(row=1, column=10, padx=(20, 5))
         controls.columnconfigure(1, weight=2)
         controls.columnconfigure(4, weight=1)
-        controls.columnconfigure(7, weight=1)
+        controls.columnconfigure(8, weight=1)
 
         actions = ttk.Frame(self, padding=(10, 0, 10, 6))
         actions.pack(fill="x")
@@ -398,10 +427,12 @@ class BadgeViewer(tk.Tk):
                 await client.stop_notify(NUS_TX_UUID)
 
     def on_ble_notification(self, _characteristic, data: bytearray) -> None:
-        # Each firmware characteristic update is one complete logical line.
-        line = bytes(data).decode("utf-8", errors="replace").strip("\x00\r\n ")
-        if line:
-            self.handle_data_line(line)
+        # Each notification holds one or more complete newline-separated lines.
+        text = bytes(data).decode("utf-8", errors="replace")
+        for line in text.splitlines():
+            line = line.strip("\x00 ")
+            if line:
+                self.handle_data_line(line)
 
     def handle_data_line(self, line: str) -> None:
         if line.startswith("DATA,"):
@@ -434,13 +465,7 @@ class BadgeViewer(tk.Tk):
             except queue.Empty:
                 break
             if kind == "sample":
-                sample = payload
-                self.history.append(sample)
-                self.samples_received += 1
-                self.last_sample_wall = time.monotonic()
-                if self.csv_writer:
-                    self.csv_writer.writerow({name: sample[name] for name in FIELDS})
-                    self.csv_file.flush()
+                self.add_sample(payload)
             elif kind == "message":
                 newest_message = str(payload)
             elif kind == "error":
@@ -478,12 +503,18 @@ class BadgeViewer(tk.Tk):
                 self.refresh_button.configure(state="normal")
                 newest_message = f"BLE scan failed: {payload}"
 
+        if self.csv_file:
+            self.csv_file.flush()
+
         now = time.monotonic()
         if newest_message:
             self.status_var.set(newest_message)
         elif self.is_connected and self.samples_received:
             age = now - self.last_sample_wall
-            self.status_var.set(f"Receiving — {self.samples_received:,} samples ({age:.1f}s since last)")
+            self.status_var.set(
+                f"Receiving — {self.measured_rate():.1f} Hz, {self.samples_received:,} samples, "
+                f"{self.samples_dropped:,} dropped ({age:.1f}s since last)"
+            )
 
         refresh_hz = max(1, int(self.refresh_var.get()))
         if now - self.last_draw >= 1.0 / refresh_hz:
@@ -491,13 +522,41 @@ class BadgeViewer(tk.Tk):
             self.last_draw = now
         self.after(25, self.process_inbox)
 
+    def add_sample(self, sample: dict[str, float]) -> None:
+        # A backwards timestamp means the board restarted; start a fresh plot.
+        if self.history and sample["time_ms"] < self.history[-1]["time_ms"]:
+            self.history.clear()
+            self.recent_times.clear()
+            self.last_seq = None
+        seq = sample["seq"]
+        if math.isfinite(seq):
+            if self.last_seq is not None and seq > self.last_seq + 1:
+                self.samples_dropped += int(seq - self.last_seq - 1)
+            self.last_seq = seq
+        self.history.append(sample)
+        self.recent_times.append(sample["time_ms"])
+        while self.recent_times[-1] - self.recent_times[0] > 2000.0:
+            self.recent_times.popleft()
+        self.samples_received += 1
+        self.last_sample_wall = time.monotonic()
+        if self.csv_writer:
+            self.csv_writer.writerow({name: sample[name] for name in FIELDS})
+
+    def measured_rate(self) -> float:
+        """Sample rate from the board's own timestamps over the last ~2 seconds."""
+        if len(self.recent_times) < 2:
+            return 0.0
+        span_ms = self.recent_times[-1] - self.recent_times[0]
+        return (len(self.recent_times) - 1) * 1000.0 / span_ms if span_ms > 0 else 0.0
+
     def draw(self) -> None:
         if not self.history:
             return
         data = list(self.history)
         end_ms = data[-1]["time_ms"]
         visible_ms = max(5.0, float(self.window_var.get())) * 1000.0
-        data = [sample for sample in data if end_ms - sample["time_ms"] <= visible_ms]
+        data = data[first_index_at_or_after(data, end_ms - visible_ms):]
+        data = data[:: max(1, math.ceil(len(data) / MAX_PLOT_POINTS))]
         x = [(sample["time_ms"] - end_ms) / 1000.0 for sample in data]
 
         for axis, (field, _title, _units, _default) in zip(self.axes, self.selected_plots()):
@@ -520,7 +579,13 @@ class BadgeViewer(tk.Tk):
         self.refresh_label.configure(text=f"{int(self.refresh_var.get())} Hz")
 
     def apply_device_rate(self) -> None:
-        command = f"RATE {int(self.rate_var.get())}\n".encode("ascii")
+        try:
+            send_ms = int(self.send_interval_var.get())
+        except (tk.TclError, ValueError):
+            send_ms = 0
+        send_ms = min(max(send_ms, 0), MAX_SEND_INTERVAL_MS)
+        self.send_interval_var.set(send_ms)
+        command = f"RATE {int(self.rate_var.get())}\nSEND {send_ms}\n".encode("ascii")
         if self.serial_port is not None:
             try:
                 self.serial_port.write(command)
@@ -562,7 +627,10 @@ class BadgeViewer(tk.Tk):
 
     def clear_history(self) -> None:
         self.history.clear()
+        self.recent_times.clear()
         self.samples_received = 0
+        self.samples_dropped = 0
+        self.last_seq = None
         for line in self.lines.values():
             line.set_data([], [])
         self.canvas.draw_idle()
