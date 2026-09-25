@@ -62,7 +62,7 @@ def main():
 #set heading(numbering: none)
 #set math.equation(numbering: "(1)")
 #set figure(gap: 5pt)
-#set table(inset: 3pt, stroke: 0.4pt)
+#set table(inset: (x: 5pt, y: 3pt), stroke: 0.4pt)
 #show heading.where(level: 1): it => block(width: 100%, above: 11pt, below: 6pt)[#set par(justify: false, first-line-indent: 0pt); #align(center)[#text(size: 10pt, weight: "regular")[#upper(it.body)]]]
 #show heading.where(level: 2): it => block(above: 8pt, below: 4pt)[#text(size: 10pt, weight: "regular", style: "italic")[#it.body]]
 #show figure.caption: set text(size: 8pt)
@@ -72,10 +72,10 @@ def main():
   set par(justify: false, first-line-indent: 0pt)
   table(columns: columns, ..cells)
 }
-#let ascii-equation(number, ..lines) = block(above: 7pt, below: 7pt, width: 100%)[
+#let ascii-equation(number, expression) = block(above: 7pt, below: 7pt, width: 100%)[
   #set par(justify: false, first-line-indent: 0pt)
   #grid(columns: (1fr, auto), column-gutter: 6pt, align: (center, right),
-    text(size: 9pt, stack(dir: ttb, spacing: 2pt, ..lines.pos().map(line => text(line)))),
+    box(text(size: 9pt, expression)),
     [#text(size: 9pt)[(#number)]],
   )
 ]
@@ -83,11 +83,11 @@ def main():
     equations = {
         1: '#ascii-equation(1, "v_i(t) = 1{m_i(t) > q_0.45^s(t)}.")\n\n'
            + inline('Here, m_i(t) is the 1 s sound mean, and q_p^x(t) is the rolling p-quantile of signal x_i over 60 s. The indicator 1{condition} equals 1 when the condition holds and 0 otherwise.'),
-        2: '#ascii-equation(2, "z_i^x(t) = [x_i(t) - q_0.25^x(t)]", "/ max(q_0.75^x(t) - q_0.25^x(t), 1).")\n\n'
-           + inline('Here, x is either sound s or acceleration a; ^x identifies the signal rather than an exponent.'),
-        3: '#ascii-equation(3, "c_i(t) = z_i^s(t)", "+ 1.2 * clip(z_i^a(t), 0, 2.5).")',
+        2: '#ascii-equation(2, "z_i^x = (x_i - q_0.25^x) / max(IQR_i^x, 1).")\n\n'
+           + inline('Here, x is either sound s or acceleration a; ^x identifies the signal rather than an exponent. Time arguments are omitted in (2), and IQR_i^x = q_0.75^x - q_0.25^x.'),
+        3: '#ascii-equation(3, "c_i(t) = z_i^s(t) + 1.2 * clip(z_i^a(t), 0, 2.5).")',
         4: '#ascii-equation(4, "H = -sum_i(p_i * ln(p_i)) / ln(n).")',
-        5: '#ascii-equation(5, "G = sum_i(sum_j(abs(d_i - d_j)))", "/ (2 * n * sum_i(d_i)).")',
+        5: '#ascii-equation(5, "G = sum_i sum_j |d_i - d_j| / (2n sum_i d_i).")',
     }
     i = 0
     while i < len(blocks):
@@ -124,7 +124,7 @@ def main():
         elif block.startswith("| "):
             rows = block.splitlines()
             cols = len(rows[0].strip("|").split("|"))
-            widths = "(1.1fr, 3.4fr, 0.6fr)" if "Number" in rows[0] else "(1.2fr, 3.5fr)" if cols==2 else "(2fr, 1fr, 1fr)"
+            widths = "(1.1fr, 3.4fr, auto)" if "Number" in rows[0] else "(1.2fr, 3.5fr)" if cols==2 else "(2fr, 1fr, 1fr)"
             cells = []
             for row_index, row in enumerate(rows):
                 if row_index == 1:

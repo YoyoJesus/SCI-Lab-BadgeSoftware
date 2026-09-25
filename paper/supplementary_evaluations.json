@@ -1,5 +1,5 @@
 {
-  "provenance": "Counts transcribed from embedded presentation figures; arithmetic only, no model training. Rows actual, columns predicted.",
+  "provenance": "Historical presentation results retained; adaptive binary counts and speaker-state matrix independently reconstructed from recovered saved local rows by audit_local_data.py. No classifier training. Rows actual, columns predicted.",
   "speaker_states": {
     "source": "Smart Badge - April 3.pptx, slide 9",
     "class_order": [
@@ -98,7 +98,8 @@
       0.7340479836651352
     ],
     "balanced_accuracy": 0.41059455929881716,
-    "macro_f1": 0.41160851542342985
+    "macro_f1": 0.41160851542342985,
+    "local_verification": "Exact matrix reconstruction from comparison_20260304_103134; same recorded interval as hacksu_meeting_3. 1445 multi-active bins resolved by row count. Unknown mapped to inactive; duplicate weighting retained."
   },
   "initial_binary": {
     "source": "Smart Badge - Feb 6.pptx, slide 11",
@@ -135,7 +136,15 @@
     "reported_accuracy": 0.857,
     "reported_precision": 0.6712,
     "reported_recall": 0.307,
-    "reported_specificity": 0.9693
+    "reported_specificity": 0.9693,
+    "recovered_counts": {
+      "tp": 14174,
+      "tn": 219087,
+      "fp": 6943,
+      "fn": 31992
+    },
+    "recovered_joined_rows": 272196,
+    "qualification": "Unknown manual labels are mapped to inactive; duplicate keys produce a many-to-many join. These are historical agreement counts, not independent fully annotated observations."
   },
   "ten_meeting_naive_bayes": {
     "source": "Smart Badge - April 3.pptx, slide 13",
