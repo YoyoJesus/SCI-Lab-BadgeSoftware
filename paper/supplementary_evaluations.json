@@ -1,0 +1,251 @@
+{
+  "provenance": "Counts transcribed from embedded presentation figures; arithmetic only, no model training. Rows actual, columns predicted.",
+  "speaker_states": {
+    "source": "Smart Badge - April 3.pptx, slide 9",
+    "class_order": [
+      "Badge01",
+      "Badge04",
+      "Badge05",
+      "Badge07",
+      "Badge09",
+      "Badge10",
+      "no_speaker"
+    ],
+    "matrix": [
+      [
+        560,
+        88,
+        89,
+        67,
+        17,
+        41,
+        569
+      ],
+      [
+        34,
+        101,
+        23,
+        28,
+        0,
+        14,
+        104
+      ],
+      [
+        43,
+        6,
+        357,
+        20,
+        34,
+        48,
+        358
+      ],
+      [
+        7,
+        11,
+        13,
+        36,
+        0,
+        5,
+        125
+      ],
+      [
+        10,
+        0,
+        1,
+        6,
+        162,
+        3,
+        77
+      ],
+      [
+        23,
+        17,
+        15,
+        22,
+        11,
+        70,
+        199
+      ],
+      [
+        53,
+        43,
+        145,
+        133,
+        94,
+        53,
+        1438
+      ]
+    ],
+    "support": [
+      1431,
+      304,
+      866,
+      197,
+      259,
+      357,
+      1959
+    ],
+    "n": 5373,
+    "correct": 2724,
+    "accuracy": 0.5069793411501954,
+    "recall": [
+      0.3913347309573725,
+      0.33223684210526316,
+      0.4122401847575058,
+      0.18274111675126903,
+      0.6254826254826255,
+      0.19607843137254902,
+      0.7340479836651352
+    ],
+    "balanced_accuracy": 0.41059455929881716,
+    "macro_f1": 0.41160851542342985
+  },
+  "initial_binary": {
+    "source": "Smart Badge - Feb 6.pptx, slide 11",
+    "class_order": [
+      "active",
+      "not_active"
+    ],
+    "matrix": [
+      [
+        14003,
+        54898
+      ],
+      [
+        6388,
+        140693
+      ]
+    ],
+    "support": [
+      68901,
+      147081
+    ],
+    "n": 215982,
+    "correct": 154696,
+    "accuracy": 0.7162448722578734,
+    "recall": [
+      0.20323362505624012,
+      0.9565681495230519
+    ],
+    "balanced_accuracy": 0.5799008872896461,
+    "macro_f1": 0.5673988542241786
+  },
+  "adaptive_binary": {
+    "source": "Smart Badge - April 3.pptx, slide 9",
+    "reported_accuracy": 0.857,
+    "reported_precision": 0.6712,
+    "reported_recall": 0.307,
+    "reported_specificity": 0.9693
+  },
+  "ten_meeting_naive_bayes": {
+    "source": "Smart Badge - April 3.pptx, slide 13",
+    "class_order": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "matrix": [
+      [
+        2,
+        1,
+        0
+      ],
+      [
+        2,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "support": [
+      3,
+      3,
+      4
+    ],
+    "n": 10,
+    "correct": 7,
+    "accuracy": 0.7,
+    "recall": [
+      0.6666666666666666,
+      0.3333333333333333,
+      1.0
+    ],
+    "balanced_accuracy": 0.6666666666666666,
+    "macro_f1": 0.6571428571428571
+  },
+  "ten_meeting_j48": {
+    "source": "Smart Badge - April 3.pptx, slide 13",
+    "class_order": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "matrix": [
+      [
+        3,
+        0,
+        0
+      ],
+      [
+        0,
+        3,
+        0
+      ],
+      [
+        0,
+        0,
+        4
+      ]
+    ],
+    "support": [
+      3,
+      3,
+      4
+    ],
+    "n": 10,
+    "correct": 10,
+    "accuracy": 1.0,
+    "recall": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "balanced_accuracy": 1.0,
+    "macro_f1": 1.0
+  },
+  "sample_mlp": {
+    "source": "Smart Badge Software Implementation.pptx, slide 8",
+    "class_order": [
+      "not_active",
+      "active"
+    ],
+    "training_percentage": 66,
+    "matrix": [
+      [
+        7888,
+        0
+      ],
+      [
+        79,
+        7883
+      ]
+    ],
+    "support": [
+      7888,
+      7962
+    ],
+    "n": 15850,
+    "correct": 15771,
+    "accuracy": 0.9950157728706625,
+    "recall": [
+      1.0,
+      0.9900778698819392
+    ],
+    "balanced_accuracy": 0.9950389349409696,
+    "macro_f1": 0.9950157723746651
+  }
+}
