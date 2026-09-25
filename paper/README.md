@@ -12,6 +12,7 @@ Files:
 
 - `manuscript.typ` :  editable Typst paper.
 - `manuscript.pdf` :  PDF compiled from Typst.
+- `manuscript.docx` :  Word version exported from `manuscript.md`.
 - `references.bib` :  source bibliography.
 - `figures/` :  portable SVG, PDF, and PNG figures.
 - `author_notes.md` :  evidence ledger, conflicting poster versions, and missing study details.
@@ -24,6 +25,8 @@ The manuscript is a venue-neutral feasibility study. Recovered local inputs repr
 ## Optional export tools
 
 `python paper/export_typst.py` regenerates the Typst source from Markdown. **This overwrites direct edits to `manuscript.typ`.** It is not necessary for normal Typst editing or compilation.
+
+`python paper/export_docx.py` writes `manuscript.docx` from `manuscript.md` with the same two-column Times New Roman layout, for co-authors or venues that need Word. It requires `python-docx` (`pip install python-docx`) and does not modify the Markdown or Typst sources. Equations remain ASCII text, and figures use the PNG exports.
 
 `python paper/build_figures.py` regenerates the vector figures and derived metrics. PNG/PDF figure exports require `rsvg-convert`; the manuscript itself uses the SVGs. This script does not modify the application or train any models.
 
