@@ -39,7 +39,9 @@ LEGACY_FIELDS = [field for field in UNSEQUENCED_FIELDS if field not in {"ambient
 KNOWN_LAYOUTS = {len(layout): layout for layout in (FIELDS, UNSEQUENCED_FIELDS, LEGACY_FIELDS)}
 
 MAX_RATE_HZ = 200
-MAX_SEND_INTERVAL_MS = 5000
+MAX_SEND_INTERVAL_MS = 600_000
+SEND_INTERVAL_PRESETS = ("Immediately", "50 ms", "1 s", "5 s", "15 s", "30 s", "1 min", "5 min")
+DURATION_UNITS_MS = {"": 1, "ms": 1, "s": 1000, "sec": 1000, "m": 60_000, "min": 60_000}
 MAX_WINDOW_SECONDS = 300
 # Lines are decimated to about this many points so drawing stays fast at high
 # sample rates; CSV recording always keeps every sample.
@@ -119,9 +121,9 @@ def add_derived_fields(sample: dict[str, float]) -> dict[str, float]:
     return sample
 
 
-BLE_PACKET_TYPE = 0x01
+BLE_PACKET_TYPE = 0x02
 BLE_HEADER = struct.Struct("<BBII3hhHIB4HbBb")
-BLE_SAMPLE = struct.Struct("<3H6h")
+BLE_SAMPLE = struct.Struct("<2H6h")
 
 
 def _signed(raw: int, scale: float) -> float:
@@ -149,11 +151,12 @@ def parse_ble_packet(data: bytes) -> list[dict[str, float]]:
         "gesture": gesture, "gsr": gsr, "rssi": rssi,
     }
     samples = []
-    for offset in range(BLE_HEADER.size, len(data), BLE_SAMPLE.size):
-        dt, dseq, sound, ax, ay, az, gx, gy, gz = BLE_SAMPLE.unpack_from(data, offset)
+    # Samples within a packet have consecutive sequence numbers.
+    for index, offset in enumerate(range(BLE_HEADER.size, len(data), BLE_SAMPLE.size)):
+        dt, sound, ax, ay, az, gx, gy, gz = BLE_SAMPLE.unpack_from(data, offset)
         sample = dict(slow)
         sample.update(
-            time_ms=time0 + dt, seq=seq0 + dseq, sound=sound,
+            time_ms=time0 + dt, seq=seq0 + index, sound=sound,
             ax=_signed(ax, 1000), ay=_signed(ay, 1000), az=_signed(az, 1000),
             gx=_signed(gx, 16), gy=_signed(gy, 16), gz=_signed(gz, 16),
         )
@@ -161,6 +164,21 @@ def parse_ble_packet(data: bytes) -> list[dict[str, float]]:
         # A gesture is an event, so only the first sample in a packet carries it.
         slow["gesture"] = -1
     return samples
+
+
+def parse_send_interval(text: str) -> int:
+    """Convert "Immediately", "250", "250 ms", "15 s", or "1 min" to milliseconds."""
+    text = text.strip().lower()
+    if text in {"immediately", "0"}:
+        return 0
+    number = text.rstrip("abcdefghijklmnopqrstuvwxyz ")
+    unit = text[len(number):].strip()
+    if unit not in DURATION_UNITS_MS:
+        raise ValueError(f"unknown unit {unit!r}")
+    milliseconds = round(float(number) * DURATION_UNITS_MS[unit])
+    if not 0 <= milliseconds <= MAX_SEND_INTERVAL_MS:
+        raise ValueError("send interval must be between 0 and 10 min")
+    return milliseconds
 
 
 def available_ports() -> list[str]:
@@ -221,7 +239,7 @@ class BadgeViewer(tk.Tk):
         self.endpoint_var = tk.StringVar()
         self.status_var = tk.StringVar(value="Disconnected")
         self.rate_var = tk.IntVar(value=100)
-        self.send_interval_var = tk.IntVar(value=50)
+        self.send_interval_var = tk.StringVar(value="50 ms")
         self.refresh_var = tk.IntVar(value=10)
         self.window_var = tk.DoubleVar(value=30.0)
         self.record_var = tk.StringVar(value="Not recording")
@@ -263,10 +281,9 @@ class BadgeViewer(tk.Tk):
         self.rate_label = ttk.Label(controls, text=f"{self.rate_var.get()} Hz", width=7)
         self.rate_label.grid(row=1, column=5)
 
-        ttk.Label(controls, text="Send every (ms)").grid(row=0, column=6, padx=(10, 0), sticky="w")
-        ttk.Spinbox(
-            controls, from_=0, to=MAX_SEND_INTERVAL_MS, increment=10,
-            textvariable=self.send_interval_var, width=7,
+        ttk.Label(controls, text="Send every").grid(row=0, column=6, padx=(10, 0), sticky="w")
+        ttk.Combobox(
+            controls, values=SEND_INTERVAL_PRESETS, textvariable=self.send_interval_var, width=11,
         ).grid(row=1, column=6, padx=(10, 4))
         self.apply_rate_button = ttk.Button(controls, text="Apply", command=self.apply_device_rate)
         self.apply_rate_button.grid(row=1, column=7, padx=5)
@@ -637,11 +654,10 @@ class BadgeViewer(tk.Tk):
 
     def apply_device_rate(self) -> None:
         try:
-            send_ms = int(self.send_interval_var.get())
-        except (tk.TclError, ValueError):
-            send_ms = 0
-        send_ms = min(max(send_ms, 0), MAX_SEND_INTERVAL_MS)
-        self.send_interval_var.set(send_ms)
+            send_ms = parse_send_interval(self.send_interval_var.get())
+        except ValueError as exc:
+            messagebox.showerror("Send interval", f"{exc}. Use a value like 250 ms, 15 s, or 1 min.")
+            return
         command = f"RATE {int(self.rate_var.get())}\nSEND {send_ms}\n".encode("ascii")
         if self.serial_port is not None:
             try:
