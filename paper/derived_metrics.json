@@ -1,0 +1,97 @@
+{
+  "source": "https://www-s3-live.kent.edu/s3fs-root/s3fs-public/JY%20Sternberg%20Harsh.pdf?VersionId=UDDNdl8b1OoxyoSmzs3e4BogTn1_vq3P",
+  "provenance": "Integer confusion matrices visually transcribed from supplied poster; no new model training.",
+  "class_order": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "results": {
+    "Random Forest": {
+      "matrix": [
+        [
+          4,
+          1,
+          0
+        ],
+        [
+          0,
+          7,
+          0
+        ],
+        [
+          0,
+          0,
+          4
+        ]
+      ],
+      "support": [
+        5,
+        7,
+        4
+      ],
+      "accuracy": 0.9375,
+      "kappa": 0.9024390243902439,
+      "precision": [
+        1.0,
+        0.875,
+        1.0
+      ],
+      "recall": [
+        0.8,
+        1.0,
+        1.0
+      ],
+      "f1": [
+        0.8888888888888888,
+        0.9333333333333333,
+        1.0
+      ],
+      "macro_f1": 0.9407407407407407,
+      "balanced_accuracy": 0.9333333333333332
+    },
+    "Multilayer perceptron": {
+      "matrix": [
+        [
+          3,
+          2,
+          0
+        ],
+        [
+          0,
+          6,
+          1
+        ],
+        [
+          0,
+          0,
+          4
+        ]
+      ],
+      "support": [
+        5,
+        7,
+        4
+      ],
+      "accuracy": 0.8125,
+      "kappa": 0.7090909090909091,
+      "precision": [
+        1.0,
+        0.75,
+        0.8
+      ],
+      "recall": [
+        0.6,
+        0.8571428571428571,
+        1.0
+      ],
+      "f1": [
+        0.75,
+        0.8,
+        0.8888888888888888
+      ],
+      "macro_f1": 0.812962962962963,
+      "balanced_accuracy": 0.8190476190476191
+    }
+  }
+}

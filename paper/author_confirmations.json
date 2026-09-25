@@ -1,0 +1,33 @@
+{
+  "source": "Author statements supplied in this conversation on 2026-09-25; not independently verified study records.",
+  "effectiveness_rater": "Austin Sternberg",
+  "effectiveness_basis": "Author assigned low/medium/high based on automatic-label output.",
+  "rating_times": null,
+  "unknown_annotation_meaning": "Never annotated; not a verified inactive label.",
+  "collection_context": "Private meetings attended by collecting author; CS1_lec1 and CS1_lec2 are small classroom lectures taught by a lab member.",
+  "consent": "Collecting author reports all participants consented.",
+  "consent_procedure_documentation": null,
+  "institutional_ethics_review": "Author reports no IRB or other institutional ethics review.",
+  "ethics_exemption_claimed": false,
+  "funding": "No funding received, per author.",
+  "contributions": {
+    "Austin Sternberg": [
+      "Data collection",
+      "Effectiveness labeling",
+      "Joint poster presentation"
+    ],
+    "Bishop Harsch": [
+      "Initial auto-labeler foundation",
+      "Post-collection data processing",
+      "Joint poster presentation"
+    ],
+    "JungYoon Kim": [
+      "Research supervision",
+      "Badge hardware",
+      "Laboratory resources"
+    ]
+  },
+  "venue": "Intentionally venue-neutral",
+  "conflicts_of_interest": null,
+  "final_author_submission_approval": null
+}

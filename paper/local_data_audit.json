@@ -1,0 +1,396 @@
+{
+  "provenance": "Audit of saved local outputs; no classifier training or sensor relabeling. Contexts inferred from record IDs; names used only for overlap counts, not verified identities.",
+  "dataset": {
+    "rows": 16,
+    "predictors": 36,
+    "classes": {
+      "medium": 7,
+      "low": 5,
+      "high": 4
+    },
+    "missing_predictor_values": 0,
+    "constant_predictors": [
+      "part_mean_self_succession_count",
+      "part_std_self_succession_count"
+    ],
+    "arff_matches_csv_at_six_decimal_precision": true,
+    "feature_reconstruction_mismatches": [],
+    "contexts": {
+      "SCI": {
+        "records": 9,
+        "classes": {
+          "low": 4,
+          "medium": 3,
+          "high": 2
+        }
+      },
+      "HacKSU": {
+        "records": 5,
+        "classes": {
+          "low": 0,
+          "medium": 3,
+          "high": 2
+        }
+      },
+      "CS1": {
+        "records": 2,
+        "classes": {
+          "low": 1,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    "duration_minutes": {
+      "min": 29.154933333333336,
+      "median": 45.405791666666666,
+      "max": 76.2615,
+      "total": 747.5553
+    },
+    "distinct_recorded_name_strings": 29,
+    "record_pairs_sharing_a_name": 55,
+    "records": [
+      {
+        "meeting_id": "sci_meeting_11_21",
+        "class": "high",
+        "date": "2025-11-21",
+        "start": "2025-11-21 13:54:10.114000",
+        "end": "2025-11-21 14:44:54.839000",
+        "recorded_participants": 5,
+        "participant_rows": 5,
+        "duration_minutes": 50.745416666666664,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_10_31",
+        "class": "low",
+        "date": "2025-10-31",
+        "start": "2025-10-31 13:59:12.098000",
+        "end": "2025-10-31 14:52:12.168000",
+        "recorded_participants": 3,
+        "participant_rows": 3,
+        "duration_minutes": 53.00116666666667,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_10_17",
+        "class": "low",
+        "date": "2025-10-17",
+        "start": "2025-10-17 14:01:14.764000",
+        "end": "2025-10-17 14:36:22.817000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 35.13421666666667,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_10_10",
+        "class": "high",
+        "date": "2025-10-10",
+        "start": "2025-10-10 13:59:44.052000",
+        "end": "2025-10-10 14:28:53.348000",
+        "recorded_participants": 2,
+        "participant_rows": 2,
+        "duration_minutes": 29.154933333333336,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_04_10",
+        "class": "medium",
+        "date": "2026-04-10",
+        "start": "2026-04-10 12:59:00.698000",
+        "end": "2026-04-10 13:30:34.035000",
+        "recorded_participants": 5,
+        "participant_rows": 5,
+        "duration_minutes": 31.555616666666666,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_04_03_p2",
+        "class": "medium",
+        "date": "2026-04-03",
+        "start": "2026-04-03 13:35:10.356000",
+        "end": "2026-04-03 14:08:12.469000",
+        "recorded_participants": 5,
+        "participant_rows": 5,
+        "duration_minutes": 33.03521666666667,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_04_03_p1",
+        "class": "low",
+        "date": "2026-04-03",
+        "start": "2026-04-03 13:02:39.491000",
+        "end": "2026-04-03 13:33:59.885000",
+        "recorded_participants": 5,
+        "participant_rows": 5,
+        "duration_minutes": 31.3399,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_03_20",
+        "class": "medium",
+        "date": "2026-03-20",
+        "start": "2026-03-20 13:02:17.450000",
+        "end": "2026-03-20 13:47:07.626000",
+        "recorded_participants": 5,
+        "participant_rows": 5,
+        "duration_minutes": 44.83626666666667,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "sci_meeting_03_06",
+        "class": "low",
+        "date": "2026-03-06",
+        "start": "2026-03-06 13:59:03.272000",
+        "end": "2026-03-06 15:00:57.475000",
+        "recorded_participants": 5,
+        "participant_rows": 5,
+        "duration_minutes": 61.90338333333333,
+        "context_from_id": "SCI"
+      },
+      {
+        "meeting_id": "hacksu_meeting_5",
+        "class": "medium",
+        "date": "2026-04-06",
+        "start": "2026-04-06 17:03:10.499000",
+        "end": "2026-04-06 17:57:36.182000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 54.42805,
+        "context_from_id": "HacKSU"
+      },
+      {
+        "meeting_id": "hacksu_meeting_4",
+        "class": "medium",
+        "date": "2026-03-02",
+        "start": "2026-03-02 16:59:44.268000",
+        "end": "2026-03-02 17:57:34.031000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 57.82938333333333,
+        "context_from_id": "HacKSU"
+      },
+      {
+        "meeting_id": "hacksu_meeting_3",
+        "class": "medium",
+        "date": "2026-02-23",
+        "start": "2026-02-23 17:08:32.703000",
+        "end": "2026-02-23 17:53:18.774000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 44.767849999999996,
+        "context_from_id": "HacKSU"
+      },
+      {
+        "meeting_id": "hacksu_meeting_2",
+        "class": "high",
+        "date": "2026-02-16",
+        "start": "2026-02-16 17:01:56.590000",
+        "end": "2026-02-16 17:47:55.109000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 45.975316666666664,
+        "context_from_id": "HacKSU"
+      },
+      {
+        "meeting_id": "hacksu_meeting_1",
+        "class": "high",
+        "date": "2026-02-09",
+        "start": "2026-02-09 17:10:02.349000",
+        "end": "2026-02-09 17:54:32.276000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 44.498783333333336,
+        "context_from_id": "HacKSU"
+      },
+      {
+        "meeting_id": "CS1_lec2",
+        "class": "low",
+        "date": "2026-04-09",
+        "start": "2026-04-09 11:00:09.628000",
+        "end": "2026-04-09 11:53:14.926000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 53.0883,
+        "context_from_id": "CS1"
+      },
+      {
+        "meeting_id": "CS1_lec1",
+        "class": "medium",
+        "date": "2026-04-07",
+        "start": "2026-04-07 10:59:20.560000",
+        "end": "2026-04-07 12:15:36.250000",
+        "recorded_participants": 6,
+        "participant_rows": 6,
+        "duration_minutes": 76.2615,
+        "context_from_id": "CS1"
+      }
+    ]
+  },
+  "speaker_comparison": {
+    "saved_rows_reproduced": true,
+    "manual_rows": 269667,
+    "auto_rows": 272096,
+    "joined_rows": 272196,
+    "duplicate_keys_beyond_first": {
+      "manual": 50,
+      "auto": 2479,
+      "joined": 2579
+    },
+    "unique_key_alignment": {
+      "both": 269617,
+      "left_only": 0,
+      "right_only": 0
+    },
+    "manual_raw_labels": {
+      "unknown": 224176,
+      "active": 45491
+    },
+    "recorded_start": "2026-02-23 17:08:32.703000",
+    "recorded_end": "2026-02-23 17:53:18.774000",
+    "binary": {
+      "tp": 14174,
+      "tn": 219087,
+      "fp": 6943,
+      "fn": 31992,
+      "accuracy": 0.8569596908110332,
+      "precision": 0.6712127669650045,
+      "recall": 0.30702248407919247,
+      "specificity": 0.969282838561253
+    },
+    "classes": [
+      "Badge01",
+      "Badge04",
+      "Badge05",
+      "Badge07",
+      "Badge09",
+      "Badge10",
+      "no_speaker"
+    ],
+    "matrix": [
+      [
+        560,
+        88,
+        89,
+        67,
+        17,
+        41,
+        569
+      ],
+      [
+        34,
+        101,
+        23,
+        28,
+        0,
+        14,
+        104
+      ],
+      [
+        43,
+        6,
+        357,
+        20,
+        34,
+        48,
+        358
+      ],
+      [
+        7,
+        11,
+        13,
+        36,
+        0,
+        5,
+        125
+      ],
+      [
+        10,
+        0,
+        1,
+        6,
+        162,
+        3,
+        77
+      ],
+      [
+        23,
+        17,
+        15,
+        22,
+        11,
+        70,
+        199
+      ],
+      [
+        53,
+        43,
+        145,
+        133,
+        94,
+        53,
+        1438
+      ]
+    ],
+    "bins": 5373,
+    "correct": 2724,
+    "manual_overlap_bins": 1445,
+    "matches_presentation_matrix": true
+  },
+  "source_sha256": {
+    "Feature Extraction/weka_outputs/meeting_dataset.csv": "0e5400bda9508e159a6e4c1c5e0d43cbc7920ad6feb2fd760ef894c7c18a61a5",
+    "Feature Extraction/weka_outputs/meeting_dataset.arff": "58295fb8ddebd5302cf346a8ca00ebef2ddcd54793af3516b8c7334b8c4bf896",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_11_21/meeting_features.csv": "9f5dc7efbdba2a122310cba1ecfda6e70ad2d016a2e29a21a4f211c8994d4a7b",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_11_21/participant_features.csv": "2d170ea5670b5c76f0a7a5af7479a3918d79c3ab2bdec3187b3a5d8c5edbdd53",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_11_21/window_features.csv": "5aeee8b8ee5ddb997b2f5b76226e13efde1ef5f0f882c47ffa7f470ebb92cf0a",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_31/meeting_features.csv": "a5da40ec8d42d1a553bbf8b2863d5569510386a03d18c0bb5ebe6c90551d834d",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_31/participant_features.csv": "5dea5698a79d2668ae2c91f823370e9492aea5cc97d7206ed0e4b805a198207b",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_31/window_features.csv": "0ee033ebce97ed9e28eaa2ed271a12d979e33d0e4e5a35194d2f3b7b6d24e2a1",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_17/meeting_features.csv": "5a601befca4c631ee5facc8d869270a7b99490c682570dfc4929b91b3bcd19c3",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_17/participant_features.csv": "c486a54c48525e1a868137667037dae07e923d556a40143daedb9048214e6584",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_17/window_features.csv": "b09ecf80e2e609a8094e9a749d9ea8573bd6ee66ea3506fdfed4eb82a480b9fa",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_10/meeting_features.csv": "1bea05b063b256b5bd5ba2e7f4ece41a6968799c13465586793a707c2bbc1df2",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_10/participant_features.csv": "9c135b05ee79773e7b8e74660498d68e1dd31ee8188fc812580d37e421eff48a",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_10_10/window_features.csv": "966df49b7eb7a876d4cfa7f0f0e244704471bb92995b881d4fe395bc9cdbe71d",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_10/meeting_features.csv": "3af540c21befb4cbeba840db75bfca366432564a3d851b95d0b03035e31b47d9",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_10/participant_features.csv": "0ee2e4f1f0f97fe06c580dc165ee4638b536ebd0106ce6b739836a6c6e9229a3",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_10/window_features.csv": "204a9553f3dce4b9c19f0bb4216b670c1003704b2a493b8f7c32236d4d5feb93",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p2/meeting_features.csv": "57f08fbba5e44df5638dfc17edd4513d4ab6dd70872164825d3f3bf5fdd5b250",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p2/participant_features.csv": "64558c9f674ce9c7734fc0727f229fb325695710cb85bfa97dbeb0e4c5ac42a4",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p2/window_features.csv": "cc2a940468f25922d0412dfb34dac74c700ccd696847280a4a8c53df296233cf",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p1/meeting_features.csv": "9fbf1591b6ad531c61c7dd2da794f0d3cb350b10358a66324c921996e9173628",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p1/participant_features.csv": "d1b1a7a58bc88894835c1d57da9b7e26ff56e0bb62c55b132a8bc5104349c547",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_04_03_p1/window_features.csv": "3caeb2937789a54819f8aba39f08f9aa9a0e29722126dcddc8561fe8d5152522",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_20/meeting_features.csv": "f13756dd0df22f9aefaef48d536354c1cd35b5419da0c24ff6f98205713be416",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_20/participant_features.csv": "2285f5b5054f94d229af5c0bd7c422b1a0e249b4621e604012a69e5223444779",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_20/window_features.csv": "41c645f89be11d8b8d4c0384a277af8dd82fc711e54832be7d75aaaadf77b668",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_06/meeting_features.csv": "e88dd5cd0d0539f5fe86edec35d00bfd172949fc81af9bcabbc8e10d3d75fb82",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_06/participant_features.csv": "9a57aff35542aed090919124075339329855548babc1bf029a8e522cc4c5761b",
+    "Feature Extraction/feature_extraction_outputs/sci_meeting_03_06/window_features.csv": "f04a2715858ad3c00b5aeca59510b75a08c283083a55ddf218b8a32b4c26825e",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_5/meeting_features.csv": "6ed7a7b923ac88ad3d83b64014729c5f08861c35f62bbb4dbd236a090cbfed9c",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_5/participant_features.csv": "a7bbd43c26080a6d3bd2d7dc51945e247cee2997f6d0bbb0194fb4bde013e2b0",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_5/window_features.csv": "e21f9f2ae35b72831946a7f3673a558983dde9e557ecaadabcbc306e59023add",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_4/meeting_features.csv": "8b8af53c81803a60f10ca59ebe61a412acbe426dcd9f8f53aceb225d9f04ecd3",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_4/participant_features.csv": "b3285326238d54881dcf1fef5011c39084cc6e539319db6a01922eed69c73fbd",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_4/window_features.csv": "e07d4e441b5e353e88efe29f53acbbf53477f2da7d400964bddddac35799c00e",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_3/meeting_features.csv": "f3291ccd3e14e127a0445798f4fccad53a5501cd721ca1e49a47dadf8bd81384",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_3/participant_features.csv": "e2339e81bba3d631755df5074d445ffed6b51685545b630177f786d30482e026",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_3/window_features.csv": "49de8ac09d7160f66d7401b7d64693cd73b7cb2214fd67b410b19b849bbd93e4",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_2/meeting_features.csv": "edaff07d7aa657c334ea227406c8c932df03c80179ed41b1c135a5da5de28325",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_2/participant_features.csv": "8dd7d5d9d3a11a31845c1b89cfcd34760b68c2598536023623f18fefa7770410",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_2/window_features.csv": "127ee3010770a796d78f74fec542b7b6264b4360487020c074776bb23a8dd478",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_1/meeting_features.csv": "931d2106f886e619ecaf6e396c7c2f1547c82b240f17fe39c35883b3742f3ff6",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_1/participant_features.csv": "8acc25c3f9d05a9566d125289a2b32ea53416ae12f9f173ea45a7c8e829d1e3b",
+    "Feature Extraction/feature_extraction_outputs/hacksu_meeting_1/window_features.csv": "4e64f034c87e2531d76cceb0d0f9bb1fd8025b8587ea1389fada08c3829ff6fa",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec2/meeting_features.csv": "8db7cd248cc6bbc71da5e0d580e54dd87cfd2652aa755f241c124c3785b81122",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec2/participant_features.csv": "3860357d7d53e673394c452f0a1fd5c907f66304c825ba8d61e7ae34e48343ef",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec2/window_features.csv": "38a80b659acec2d6d6bc922492a69f1fa69549ef5660770abe802b331882d541",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec1/meeting_features.csv": "d8eb17a66e68da069b41e74adf8d250985a596019f855b51b17843b628d02276",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec1/participant_features.csv": "ba514925b47f1d4995a17f99d6ba611a5d56a7637cffb5e465394c0d7b1598b1",
+    "Feature Extraction/feature_extraction_outputs/CS1_lec1/window_features.csv": "c16228844fd8d80c15c8b8bb6f777587b0afb29076b04d7c78b7cad2139a892d",
+    "currentdata/label_comparison/comparison_20260304_103134/label_comparison_20260304_103134.csv": "f15f99ff1e9a754ebb634344c8e453defc68e43524643be810522655c6f0cb0e",
+    "currentdata/session_20260225_103434/processed_badge_data_20260225_103434.csv": "fdd1f5701f7457d5d2e232db9f3bf6c8dcb6782dcc84f20e71dc8efdaa1fa849",
+    "currentdata/auto_label/hacksu_d3_2.3.csv": "fa43244d6504a69075c8472f29497e942b35d6bbf4d5d5ec9ba5c643c1edf836"
+  }
+}

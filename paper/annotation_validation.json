@@ -1,0 +1,36 @@
+{
+  "manual": {
+    "input_rows": 269667,
+    "unique_keys": 269617,
+    "duplicate_rows_beyond_first": 50,
+    "conflicting_keys_excluded": 0
+  },
+  "auto": {
+    "input_rows": 272096,
+    "unique_keys": 269617,
+    "duplicate_rows_beyond_first": 2479,
+    "conflicting_keys_excluded": 0
+  },
+  "alignment": {
+    "both": 269617,
+    "left_only": 0,
+    "right_only": 0
+  },
+  "matched_unique_keys": 269617,
+  "explicitly_annotated_keys": 45472,
+  "unannotated_keys": 224145,
+  "annotation_coverage_fraction": 0.16865405371323025,
+  "annotated_active_keys": 45472,
+  "annotated_inactive_keys": 0,
+  "active_keys_with_valid_auto_label": 45472,
+  "active_keys_detected": 14019,
+  "recall_on_annotated_active_keys": 0.30829961294862773,
+  "specificity": null,
+  "precision": null,
+  "overall_binary_accuracy": null,
+  "qualification": "Unknown means never annotated (author confirmation). Only conditional recall on annotated active keys is estimable here; annotations may not cover all active periods. Precision, specificity, and overall accuracy are unavailable without verified negatives and adequate coverage. This is a new unique-key analysis, not a replacement of historical duplicate-weighted counts.",
+  "source_sha256": {
+    "currentdata/session_20260225_103434/processed_badge_data_20260225_103434.csv": "fdd1f5701f7457d5d2e232db9f3bf6c8dcb6782dcc84f20e71dc8efdaa1fa849",
+    "currentdata/auto_label/hacksu_d3_2.3.csv": "fa43244d6504a69075c8472f29497e942b35d6bbf4d5d5ec9ba5c643c1edf836"
+  }
+}
