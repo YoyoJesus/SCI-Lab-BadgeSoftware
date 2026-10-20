@@ -85,7 +85,7 @@ The application-code evidence below was reviewed at revision `85e0fbce5203ae2757
 | Classifier results and settings | Poster transcription in `derived_metrics.json`; recovered WEKA application-log commands and numerical reconstruction in `weka_evaluation.json` |
 | Recovered sample and feature export | `audit_local_data.py`, `local_data_audit.json`, and the 53 hashed local inputs |
 | Speaker diagnostic | Presentation transcription in `supplementary_evaluations.json`, independently reconstructed from the saved local comparison rows |
-| Previous 14-meeting experiment | `COF Poster - SCI Smart Badge - Austin Sternberg.pdf`, not combined with linked results |
+| Previous 14-meeting experiment | `presentations/COF Poster - SCI Smart Badge - Austin Sternberg.pdf`, not combined with linked results |
 
 ## Known implementation limits retained for reproduction
 
