@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 CLASSES = ['low', 'medium', 'high']
+REPEAT_SEEDS = list(range(1, 11))
 MODELS = {
     'ZeroR': ('weka.classifiers.rules.ZeroR', []),
     'Logistic': ('weka.classifiers.functions.Logistic', ['-R', '1.0', '-M', '-1']),
@@ -116,6 +117,7 @@ def main():
     scratch.mkdir(parents=True, exist_ok=True)
     # Fixed protocols; no hyperparameter or seed search.
     jobs = [(model, 'stratified_10fold_seed1', None, None) for model in MODELS]
+    jobs += [(model, 'repeated_10x10fold', seed, None) for seed in REPEAT_SEEDS for model in MODELS]
     for protocol, groups in [('leave_session_out', sessions), ('leave_context_out', contexts)]:
         for group_index, (_, test_ids) in enumerate(sorted(groups.items())):
             train_ids = [x for x in ids if x not in test_ids]
@@ -128,7 +130,7 @@ def main():
     def run(job):
         model, protocol, fold, files = job
         cls, options = MODELS[model]
-        evaluation = ['-t', str(data_path), '-x', '10', '-s', '1'] if files is None else ['-t', str(files[0]), '-T', str(files[1])]
+        evaluation = ['-t', str(data_path), '-x', '10', '-s', str(fold or 1)] if files is None else ['-t', str(files[0]), '-T', str(files[1])]
         command = prefix + [cls] + evaluation + ['-v', '-o', '-classifications', 'weka.classifiers.evaluation.output.prediction.CSV -p first-last -distribution -decimals 12'] + options
         result = subprocess.run(command, text=True, capture_output=True, check=True, timeout=120)
         (scratch / f'{protocol}_{fold}_{model}.out').write_text(result.stdout + result.stderr, encoding='utf-8')
@@ -147,7 +149,7 @@ def main():
             record_id = lookup[tuple(float(x) for x in cells[7:])]
             actual, predicted = (x.split(':')[1] for x in cells[1:3])
             assert actual == data.loc[data.meeting_id == record_id, 'effectiveness'].iloc[0]
-            predictions.append({'record_id': record_id, 'fold': cv_fold if files is None else fold,
+            predictions.append({'record_id': record_id, 'fold': (cv_fold if fold is None else f'{fold}:{cv_fold}') if files is None else fold,
                                 'actual': actual, 'predicted': predicted, 'probabilities': probabilities})
         assert predictions, result.stdout
         return model, protocol, predictions
@@ -161,7 +163,8 @@ def main():
         result_runs[protocol] = {}
         reference_folds = None
         for model, predictions in model_predictions.items():
-            assert sorted(p['record_id'] for p in predictions) == sorted(ids)
+            repeats = len(REPEAT_SEEDS) if protocol == 'repeated_10x10fold' else 1
+            assert sorted(p['record_id'] for p in predictions) == sorted(ids * repeats)
             folds = {}
             for row in predictions:
                 folds.setdefault(row['fold'], []).append(row['record_id'])
@@ -181,6 +184,10 @@ def main():
                                      'shared_name_strings': len(train_names & test_names),
                                      'train_classes': data[data.meeting_id.isin(train_ids)].effectiveness.value_counts().to_dict()})
             result_runs[protocol][model] = {'metrics': metrics(predictions), 'folds': fold_details, 'predictions': predictions}
+            if protocol == 'repeated_10x10fold':
+                per_seed = [metrics([p for p in predictions if p['fold'].startswith(f'{seed}:')])['accuracy'] for seed in REPEAT_SEEDS]
+                result_runs[protocol][model]['per_seed_accuracy'] = per_seed
+                result_runs[protocol][model]['accuracy_sd'] = float(np.std(per_seed, ddof=1))
     targets = {'RandomForest': ([[4,1,0],[0,7,0],[0,0,4]], [0.9024, 0.2129, 0.2612]),
                'MLP': ([[3,2,0],[0,6,1],[0,0,4]], [0.7091, 0.1758, 0.3269])}
     for model, (matrix, rounded) in targets.items():
@@ -200,6 +207,7 @@ def main():
               'input_arff_sha256': sha(data_path), 'historical_log': historical,
               'class_order': CLASSES, 'model_options': MODELS,
               'protocol_notes': {'stratified_10fold_seed1': 'WEKA stratified CV, evaluation seed 1; paired across models. Fold IDs reconstructed from WEKA prediction output. RF/MLP options recovered from log; seed inferred by reconstruction.',
+                                 'repeated_10x10fold': 'Stratified 10-fold CV repeated with evaluation seeds 1-10; paired across models. Each record is tested once per seed, so pooled matrices count every record 10 times. Fold IDs are seed:fold.',
                                  'leave_session_out': '15 context/date groups; both April 3 SCI segments kept together. Training preserves original ARFF order. Repeated participants remain across folds.',
                                  'leave_context_out': 'Three filename-derived contexts. Training preserves original ARFF order. Contexts are not participant-disjoint.',
                                  'preprocessing': 'All 36 saved predictors retained. WEKA Logistic standardizes using each training fold with fixed ridge 1.0 and no tuning; other models use recorded/default internal processing. Existing label generation remains feature-informed.'},

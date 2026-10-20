@@ -28,7 +28,7 @@ The manuscript is a venue-neutral feasibility study. Recovered local inputs repr
 
 `python paper/export_docx.py` writes `manuscript.docx` from `manuscript.md` with the same two-column Times New Roman layout, for co-authors or venues that need Word. It requires `python-docx` (`pip install python-docx`) and does not modify the Markdown or Typst sources. Equations are written as native Word math, so they are typeset and stay editable in Word's equation editor; the equation sources are the `EQUATIONS` and `INLINE_MATH` tables in the script. Figures use the PNG exports.
 
-`python paper/build_figures.py` regenerates the vector figures and derived metrics. PNG/PDF figure exports require `rsvg-convert`; the manuscript itself uses the SVGs. This script does not modify the application or train any models.
+`python paper/build_figures.py` regenerates the vector figures and derived metrics. The confusion-matrix figure reads the pooled 10x10 repeated cross-validation matrices from `weka_evaluation.json`, so run `evaluate_weka.py` first. PNG/PDF figure exports use `rsvg-convert`, falling back to Inkscape; the manuscript itself uses the SVGs. This script does not modify the application or train any models.
 
 ## Audit recovered local data
 

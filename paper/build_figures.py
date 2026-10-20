@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Redraw manuscript diagrams and verify arithmetic from poster counts.
 
-The figures are vector diagrams/tables. Counts are transcribed from the poster;
-this script does not fit models or use participant-level study data.
+The figures are vector diagrams/tables. derived_metrics.json uses counts
+transcribed from the poster; the confusion-matrix figure pools the 10x10
+repeated cross-validation predictions saved by evaluate_weka.py. This script
+does not fit models or use participant-level study data.
 """
 from pathlib import Path
 from html import escape
 import json
+import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parent
@@ -16,6 +19,13 @@ MATRICES = {
     "Random Forest": [[4, 1, 0], [0, 7, 0], [0, 0, 4]],
     "Multilayer perceptron": [[3, 2, 0], [0, 6, 1], [0, 0, 4]],
 }
+REPEATED = {"Random Forest": "RandomForest", "Multilayer perceptron": "MLP"}
+INKSCAPE = Path("C:/Program Files/Inkscape/bin/inkscape.com")
+
+
+def repeated_matrices():
+    runs = json.loads((ROOT/"weka_evaluation.json").read_text())["runs"]["repeated_10x10fold"]
+    return {name: runs[key]["metrics"]["matrix"] for name, key in REPEATED.items()}
 
 
 def metrics(c):
@@ -46,8 +56,12 @@ def svg_start(w, h):
 def save_figure(name, svg):
     path = FIGURES / f"{name}.svg"
     path.write_text(svg + "</svg>")
-    subprocess.run(["rsvg-convert", "-z", "2", "-o", str(FIGURES/f"{name}.png"), str(path)], check=True)
-    subprocess.run(["rsvg-convert", "-f", "pdf", "-o", str(FIGURES/f"{name}.pdf"), str(path)], check=True)
+    if shutil.which("rsvg-convert"):
+        subprocess.run(["rsvg-convert", "-z", "2", "-o", str(FIGURES/f"{name}.png"), str(path)], check=True)
+        subprocess.run(["rsvg-convert", "-f", "pdf", "-o", str(FIGURES/f"{name}.pdf"), str(path)], check=True)
+    else:
+        for suffix, extra in [("png", ["--export-dpi=192"]), ("pdf", [])]:
+            subprocess.run([str(INKSCAPE), str(path), f"--export-filename={FIGURES/f'{name}.{suffix}'}", *extra], check=True)
 
 
 def make_figures():
@@ -55,7 +69,7 @@ def make_figures():
     # A graphic table, with exact counts and row-normalized cell shading.
     svg = svg_start(1080, 430)
     labels = ["Low", "Medium", "High"]
-    for offset, (name, matrix) in zip([0, 545], MATRICES.items()):
+    for offset, (name, matrix) in zip([0, 545], repeated_matrices().items()):
         svg += text(offset+270, 32, name, 23, weight="bold")
         svg += text(offset+22, 225, "Actual", 17, anchor="start")
         for r in range(3):
