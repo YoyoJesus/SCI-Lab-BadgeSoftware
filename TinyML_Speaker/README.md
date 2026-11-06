@@ -58,6 +58,13 @@ An abrupt process termination preserves raw rows; replay can recover labels.
 
 ## Add ML with the other sensors
 
+Use the [human observer workflow](GROUND_TRUTH.md) to collect independent labels
+and merge them into training-ready CSVs. Start the panel with:
+
+```powershell
+.\run.bat annotate --badges badge_01 badge_02 --recording-id session_01
+```
+
 The model inputs are normalized sound, normalized acceleration, normalized
 presence margin, gyro magnitude (degrees/s), magnetic-field magnitude (uT),
 temperature (C), humidity (%), pressure (kPa), and proximity (sensor counts).
@@ -148,9 +155,12 @@ artifacts are also ignored. Nothing is uploaded to a training service.
 The first release needs physical-board checks for sampling cadence, sensor
 availability, BLE delivery with several badges, memory use, and power consumption.
 
-Validation performed: ten new pytest checks and the three existing paper
+Validation performed: nineteen workflow pytest checks and the three existing paper
 validation checks passed. Both paper-only and synthetic-model firmware builds
 compiled with Arduino Mbed Nano core 4.6.0. Paper-only firmware used 361,816 bytes
 of flash and 79,672 bytes of static RAM. The synthetic model checked the export
 and compilation path only; no trained speech model is included. No firmware was
 uploaded and no physical badge or BLE collection was tested.
+The native observer panel was rendered with synthetic badge IDs, and its
+state transitions and annotation merge/evaluation path were checked. Human
+annotation reliability has not been measured.

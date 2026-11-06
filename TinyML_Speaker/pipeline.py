@@ -323,6 +323,20 @@ def main() -> None:
     receiver.add_argument('--seconds', type=float, default=60)
     receiver.add_argument('--recording-id', default='session_01')
     receiver.add_argument('--output', default=str(ROOT / 'outputs'))
+    observer = commands.add_parser('annotate', help='Open independent human observer panel')
+    observer.add_argument('--badges', nargs='+', required=True)
+    observer.add_argument('--recording-id', required=True)
+    observer.add_argument('--output', default=None)
+    merger = commands.add_parser('merge', help='Align observer intervals with badge CSV for training')
+    merger.add_argument('csv')
+    merger.add_argument('intervals')
+    merger.add_argument('--output', required=True)
+    merger.add_argument('--boundary-ms', type=float, default=200)
+    merger.add_argument('--offset-ms', type=float, default=0)
+    evaluation = commands.add_parser('evaluate', help='Compare predictions against human reference only')
+    evaluation.add_argument('csv')
+    evaluation.add_argument('--prediction', choices=['candidate', 'paper_candidate'], default='candidate')
+    evaluation.add_argument('--output', required=True)
     args = parser.parse_args()
     if args.command == 'receive' and (not math.isfinite(args.seconds) or args.seconds <= 0):
         parser.error('--seconds must be positive and finite')
@@ -331,6 +345,25 @@ def main() -> None:
             train(args)
         elif args.command == 'replay':
             replay(args)
+        elif args.command == 'annotate':
+            from observer import launch
+            stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+            launch(Path(args.output) if args.output else ROOT / f'outputs/{stamp}_reference.csv', args.recording_id, args.badges)
+        elif args.command == 'merge':
+            from ground_truth import merge_annotations
+            merged = merge_annotations(pd.read_csv(args.csv), pd.read_csv(args.intervals), args.boundary_ms, args.offset_ms)
+            target = Path(args.output)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            merged.to_csv(target, mode='x', index=False)
+            print(f'Wrote {target}: {merged.activity_label.value_counts().to_dict()}')
+        elif args.command == 'evaluate':
+            from ground_truth import evaluate_reference
+            report = evaluate_reference(pd.read_csv(args.csv), args.prediction)
+            target = Path(args.output)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open('x', encoding='utf-8') as handle:
+                json.dump(report, handle, indent=2)
+            print(f'Wrote reference evaluation to {target}')
         else:
             asyncio.run(receive(args))
     except (ValueError, OSError, ConnectionError) as error:

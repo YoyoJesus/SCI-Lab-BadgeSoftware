@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('setup', 'replay', 'train', 'receive', 'test')]
+    [ValidateSet('setup', 'replay', 'train', 'receive', 'annotate', 'merge', 'evaluate', 'test')]
     [string]$Action = 'receive',
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$CommandArgs

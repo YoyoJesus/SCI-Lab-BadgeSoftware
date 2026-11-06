@@ -34,6 +34,13 @@ artifacts are ignored by git. Engagement inference stays on the PC.
 
 ## Implementation plan
 
+The independent PC reference uses an observer-only Tkinter panel. Per-badge
+states support overlapping speakers and explicit unknown intervals. State
+changes and one-second checkpoints save half-open UTC intervals. Focus loss
+pauses annotation. Merge by recording/badge and PC arrival timestamp, preserving
+unknown time and excluding a configurable transition margin. Evaluate only
+annotated samples; prediction output is hidden from the observer panel.
+
 1. Test causal normalization, thresholds, voting, invalid readings, grouped
    training, model export, and transport validation.
 2. Build headless replay/train/receive commands and matching C++ detection.
