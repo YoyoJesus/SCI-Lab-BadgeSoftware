@@ -39,7 +39,7 @@ IMU/BLE failure; slower blinking indicates microphone initialization failure.
 
 ```powershell
 .\run.bat receive --scan
-.\run.bat receive --seconds 300 --recording-id session_01
+.\run.bat receive --seconds 300 --recording-id session_01 --rate 200 --send-seconds 5
 ```
 
 The receiver connects to badges advertising the new service. To select devices,
@@ -55,6 +55,51 @@ original `Timestamp`, `Badge_Name`, `Sound_Level`, and `Acceleration` columns
 are intended for the existing Feature Extraction workflow. Engagement inference
 is not run automatically. Labels are produced after collection in this version.
 An abrupt process termination preserves raw rows; replay can recover labels.
+
+## High-rate acquisition and bulk sending
+
+The v2 firmware follows the acquisition design in
+`../Nano33SenseRev2_SerialRealtime`: a high-priority thread reads acceleration
+and gyroscope together over 400 kHz I2C, with BMI270 advanced power save disabled
+and its output rate raised to 200 Hz when requested. Acquisition defaults to
+200 Hz; `--rate` accepts 10, 50, 100, or 200. Actual cadence and fresh-data delivery
+still require physical-board measurement.
+
+A separate processing thread evaluates each acquired sample. The paper's
+quartile history and short sound mean refresh at approximately 10 Hz, retaining
+the 1 s/60 s timescales. Motion uses the nearest available reading to a 100 ms
+axis difference, rather than shrinking the difference interval as rate rises.
+The 16 kHz microphone, magnetometer, environment, and proximity retain their
+own update rates; high-rate rows repeat their latest values.
+
+Acquisition feeds a 128-sample processing queue. Processed predictions and sensor
+features enter a separate 1,536-record output queue. BLE sends binary packets
+of up to three records, independent of acquisition. Default sending is every
+five seconds. `--send-seconds 0` sends immediately; values up to 600 are accepted.
+Sending starts early at 1,152 queued records, approximately 5.76 s at 200 Hz or
+11.52 s at 100 Hz, so requesting a longer interval does not increase buffer size.
+If processing or BLE cannot keep up, new samples are dropped and counters advance;
+buffering cannot guarantee lossless delivery.
+
+Each record retains its acquisition-time `device_ms` and sequence number.
+At connection, the PC sends a UTC clock anchor. `Timestamp` is reconstructed
+from that anchor and acquisition time; `Arrival_Timestamp` records bulk delivery
+time, and `Clock_Source` identifies the mapping. This prevents a whole burst
+from being assigned one arrival-time bin. The anchor is approximate: one-way BLE
+command delay, clock drift, and observer reaction time remain uncorrected.
+Clock mapping supports a device-millisecond wrap for sessions within 24 days
+of their anchor. `seq_gap` and cumulative `late_samples` expose missing samples.
+
+Normal completion and Ctrl+C request STOP, drain the processing/output queues,
+and await the badge's completion marker before disconnecting. A lost connection
+or forced process termination cannot recover unsent data. Use `--raw-only` for
+long high-rate captures to skip the final in-memory speaker-labeling pass; raw
+CSV recording itself does not retain all samples in a Python list.
+
+The receiver also accepts the original v1 ASCII firmware, marked
+`Clock_Source=arrival_legacy`. Rate controls and acquisition-clock anchoring
+require v2 firmware. Reflash all badges used in a bulk/observer recording and
+re-evaluate existing models on the higher-rate features.
 
 ## Add ML with the other sensors
 
@@ -132,8 +177,8 @@ Differences from the offline algorithm:
   a centered five-bin vote requiring three wins. Available observed bins are
   used, following the original implementation. Short-run suppression and gap
   merging from the offline labeler are not applied.
-- Timestamps are PC arrival times, not synchronized badge clocks. `device_ms`,
-  sequence counters, and `seq_gap` support diagnosis but do not fix alignment.
+- V2 timestamps use the approximate PC/device anchor described above. Legacy
+  firmware retains arrival-time timestamps, unsuitable for bulk alignment.
 - PC ranking still uses the paper score even in hybrid mode. This retains the
   single-dominant-speaker assumption and does not resolve simultaneous speakers.
 
@@ -144,9 +189,20 @@ overlap, onset delay, and downstream speaking-time/turn-count errors.
 ## Transport and local storage
 
 Service `e8310001-65d2-4b11-91e0-87f64f931c82`, notify characteristic
-`e8310002-65d2-4b11-91e0-87f64f931c82`. Newline-delimited ASCII is fragmented
-into at most 20-byte notifications. `M,<model_id>` identifies the model.
-`S` rows follow `FIELDS` in `pipeline.py`. Raw audio stays transient on the badge;
+`e8310002-65d2-4b11-91e0-87f64f931c82`, command characteristic
+`e8310003-65d2-4b11-91e0-87f64f931c82`. V2 notifications have a four-byte
+little-endian `<BBH` header (type 4, version 1, record count 1–3), followed by
+65-byte `<III13fB` records: sequence, acquisition milliseconds, cumulative drops,
+13 floats in the order of `transport.FLOAT_FIELDS`, and ready/paper/hybrid flags
+in bits 0–2. Three records occupy 199 bytes, requiring an ATT MTU of at least
+202, comparable to the reference firmware's large notifications. Truncated or
+malformed packets stop capture with an error rather than silently misaligning data.
+
+Text notifications carry `M,<model_id>`, `C,<device_ms>,<host_utc_ms>`, command
+status, and `D` for completed drain. Commands are newline-terminated `RATE`,
+`SEND` (milliseconds), `CLOCK` (UTC milliseconds), `STOP`, and `STATUS`.
+The original fragmented `S` ASCII rows remain supported by the PC decoder only.
+Raw audio stays transient on the badge;
 only scalars are transmitted. Optional sensor values use -1 when unavailable.
 Raw CSVs contain behavioral data and remain local under ignored `outputs/`.
 Training data belongs in ignored `data/`. Generated model headers and evaluation
@@ -155,12 +211,15 @@ artifacts are also ignored. Nothing is uploaded to a training service.
 The first release needs physical-board checks for sampling cadence, sensor
 availability, BLE delivery with several badges, memory use, and power consumption.
 
-Validation performed: nineteen workflow pytest checks and the three existing paper
+Validation performed: twenty-seven workflow pytest checks and the three existing paper
 validation checks passed. Both paper-only and synthetic-model firmware builds
-compiled with Arduino Mbed Nano core 4.6.0. Paper-only firmware used 361,816 bytes
-of flash and 79,672 bytes of static RAM. The synthetic model checked the export
+compiled with Arduino Mbed Nano core 4.6.0. The synthetic model checked the export
 and compilation path only; no trained speech model is included. No firmware was
 uploaded and no physical badge or BLE collection was tested.
+The v2 paper-only build used 366,408 bytes of flash and 193,096 bytes of static
+RAM. Runtime stacks, heap use, sustained sampling, and BLE throughput remain
+hardware checks. Receiver tests cover bulk packet validation, clock wrapping,
+delayed delivery, sequence gaps, and final draining on normal completion/cancellation.
 The native observer panel was rendered with synthetic badge IDs, and its
 state transitions and annotation merge/evaluation path were checked. Human
 annotation reliability has not been measured.

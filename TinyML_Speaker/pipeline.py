@@ -66,11 +66,14 @@ def decode_line(line: str) -> dict:
     if len(parts) != len(FIELDS) + 1 or parts[0] != 'S':
         raise ValueError('Invalid v1 sensor row')
     numbers = [float(p) for p in parts[1:]]
-    if not all(math.isfinite(v) for v in numbers):
+    return validate_row(dict(zip(FIELDS, numbers)))
+
+
+def validate_row(row: dict) -> dict:
+    if not all(math.isfinite(v) for v in row.values()):
         raise ValueError('Nonfinite sensor data')
-    row = dict(zip(FIELDS, numbers))
     for field in ['seq', 'device_ms', 'late_samples']:
-        if row[field] < 0 or not row[field].is_integer():
+        if row[field] < 0 or int(row[field]) != row[field]:
             raise ValueError('Invalid counter')
         row[field] = int(row[field])
     if row['Sound_Level'] < 0 or row['Acceleration'] < 0:
@@ -182,7 +185,7 @@ def label_frame(frame: pd.DataFrame) -> pd.DataFrame:
     """Apply the paper's winner and centered vote to a complete table."""
     import pandas as pd
     frame = frame.copy()
-    frame['Timestamp'] = pd.to_datetime(frame['Timestamp'], utc=True)
+    frame['Timestamp'] = pd.to_datetime(frame['Timestamp'], utc=True, format='ISO8601')
     frame['time_bin'] = frame['Timestamp'].dt.floor('500ms')
     eligible = frame[frame['candidate'].isin([1, True])]
     winners = {}
@@ -208,7 +211,7 @@ def replay(args: argparse.Namespace) -> None:
         label_frame(frame).to_csv(output, index=False, mode='x')
         print(f'Wrote {output} from stored badge candidates.')
         return
-    frame['Timestamp'] = pd.to_datetime(frame['Timestamp'], utc=True)
+    frame['Timestamp'] = pd.to_datetime(frame['Timestamp'], utc=True, format='ISO8601')
     result = []
     for _, group in frame.groupby('Badge_Name'):
         detector = Detector()
@@ -234,6 +237,7 @@ def replay(args: argparse.Namespace) -> None:
 
 async def receive(args: argparse.Namespace) -> None:
     from bleak import BleakClient, BleakScanner
+    from transport import BulkSession, CONTROL
     import pandas as pd
     discovered = await BleakScanner.discover(timeout=8, service_uuids=[SERVICE])
     if args.scan:
@@ -247,43 +251,30 @@ async def receive(args: argparse.Namespace) -> None:
     output.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     raw_path = output / f'{stamp}_raw.csv'
-    buffers: dict[str, str] = {}
-    last_seq: dict[str, int] = {}
+    sessions: dict[str, BulkSession] = {}
+    controlled: dict[str, BleakClient] = {}
+    errors: list[str] = []
     clients = []
-    rows = []
+    sample_count = 0
     with raw_path.open('x', newline='', encoding='utf-8') as handle:
-        columns = ['Timestamp', 'Badge_Name', 'Person_Name', 'Recording_ID', 'model_id', 'RSSI', 'seq_gap'] + FIELDS
+        columns = ['Timestamp', 'Arrival_Timestamp', 'Clock_Source', 'Badge_Name', 'Person_Name',
+                   'Recording_ID', 'model_id', 'RSSI', 'seq_gap'] + FIELDS
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
 
         def on_data(badge: str, data: bytearray) -> None:
-            # BLE notifications are fragments of newline-delimited ASCII rows.
-            buffers[badge] = buffers.get(badge, '') + data.decode('ascii', errors='replace')
-            if len(buffers[badge]) > 4096:
-                buffers[badge] = ''
-                print(f'{badge}: discarded oversized transport buffer')
+            nonlocal sample_count
+            if errors:
                 return
-            while '\n' in buffers[badge]:
-                line, buffers[badge] = buffers[badge].split('\n', 1)
-                if line.startswith('M,'):
-                    model_ids[badge] = line[2:].strip()
-                    continue
-                try:
-                    row = decode_line(line)
-                except ValueError as error:
-                    print(f'{badge}: rejected row: {error}')
-                    continue
-                previous = last_seq.get(badge)
-                gap = max(0, row['seq'] - previous - 1) if previous is not None else 0
-                last_seq[badge] = row['seq']
-                row.update(Timestamp=datetime.now(timezone.utc).isoformat(), Badge_Name=badge,
-                           Person_Name='', Recording_ID=args.recording_id, model_id=model_ids.get(badge, 'unknown'),
-                           RSSI='', seq_gap=gap)
-                writer.writerow(row)
+            try:
+                for row in sessions[badge].feed(bytes(data), datetime.now(timezone.utc)):
+                    row.update(Badge_Name=badge, Person_Name='', Recording_ID=args.recording_id, RSSI='')
+                    writer.writerow(row)
+                    sample_count += 1
                 handle.flush()
-                rows.append(row)
+            except (ValueError, OSError) as error:
+                errors.append(f'{badge}: {error}')
 
-        model_ids: dict[str, str] = {}
         try:
             for i, device in enumerate(devices):
                 badge = f'badge_{i + 1:02d}'
@@ -291,19 +282,49 @@ async def receive(args: argparse.Namespace) -> None:
                 client = BleakClient(device)
                 await client.connect()
                 clients.append(client)
+                sessions[badge] = BulkSession()
                 await client.start_notify(CHARACTERISTIC, lambda _, data, badge=badge: on_data(badge, data))
+                if client.services.get_characteristic(CONTROL):
+                    controlled[badge] = client
+                    command = f'RATE {args.rate}\nSEND {round(args.send_seconds * 1000)}\nCLOCK {time.time_ns() // 1000000}\n'
+                    await client.write_gatt_char(CONTROL, command.encode('ascii'), response=True)
+                    deadline = time.monotonic() + 5
+                    while sessions[badge].clock is None and time.monotonic() < deadline:
+                        if errors:
+                            raise ValueError(errors[0])
+                        await asyncio.sleep(.02)
+                    if sessions[badge].clock is None:
+                        raise ConnectionError(f'{badge}: clock handshake timed out')
+                else:
+                    print(f'{badge}: legacy firmware; timestamps are BLE arrival times, rate settings unavailable')
             print(f'Recording scalar readings to {raw_path} for {args.seconds:g} seconds')
             started = time.monotonic()
             while time.monotonic() - started < args.seconds:
+                if errors:
+                    raise ValueError(errors[0])
                 if any(not client.is_connected for client in clients):
                     raise ConnectionError('Badge disconnected; raw rows preserved, start a new recording')
                 await asyncio.sleep(.2)
         finally:
-            await asyncio.gather(*(client.disconnect() for client in clients if client.is_connected), return_exceptions=True)
-            if rows:
-                labeled = raw_path.with_name(f'{stamp}_labeled.csv')
-                label_frame(pd.DataFrame(rows)).to_csv(labeled, index=False)
-                print(f'Labeled CSV: {labeled}')
+            try:
+                live = {badge: client for badge, client in controlled.items() if client.is_connected}
+                if not errors:
+                    for client in live.values():
+                        await client.write_gatt_char(CONTROL, b'STOP\n', response=True)
+                    deadline = time.monotonic() + 15
+                    while any(not sessions[badge].complete for badge in live):
+                        if errors:
+                            raise ValueError(errors[0])
+                        if time.monotonic() >= deadline or any(not client.is_connected for client in live.values()):
+                            raise ConnectionError('Final bulk drain failed; received raw rows preserved')
+                        await asyncio.sleep(.05)
+            finally:
+                await asyncio.gather(*(client.disconnect() for client in clients if client.is_connected), return_exceptions=True)
+                if sample_count and not args.raw_only:
+                    labeled = raw_path.with_name(f'{stamp}_labeled.csv')
+                    label_frame(pd.read_csv(raw_path)).to_csv(labeled, index=False)
+                    print(f'Labeled CSV: {labeled}')
+                print(f'Saved {sample_count} samples')
 
 
 def main() -> None:
@@ -323,6 +344,9 @@ def main() -> None:
     receiver.add_argument('--seconds', type=float, default=60)
     receiver.add_argument('--recording-id', default='session_01')
     receiver.add_argument('--output', default=str(ROOT / 'outputs'))
+    receiver.add_argument('--rate', type=int, choices=[10, 50, 100, 200], default=200)
+    receiver.add_argument('--send-seconds', type=float, default=5)
+    receiver.add_argument('--raw-only', action='store_true', help='Skip final in-memory speaker labeling for long captures')
     observer = commands.add_parser('annotate', help='Open independent human observer panel')
     observer.add_argument('--badges', nargs='+', required=True)
     observer.add_argument('--recording-id', required=True)
@@ -340,6 +364,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == 'receive' and (not math.isfinite(args.seconds) or args.seconds <= 0):
         parser.error('--seconds must be positive and finite')
+    if args.command == 'receive' and (not math.isfinite(args.send_seconds) or not 0 <= args.send_seconds <= 600):
+        parser.error('--send-seconds must be finite and between 0 and 600')
     try:
         if args.command == 'train':
             train(args)

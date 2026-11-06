@@ -11,7 +11,7 @@ the standard Python Windows installer includes Tkinter.
 From `TinyML_Speaker`, first start the receiver:
 
 ```powershell
-.\run.bat receive --seconds 600 --recording-id session_01
+.\run.bat receive --seconds 600 --recording-id session_01 --rate 200 --send-seconds 5
 ```
 
 Note which wearer corresponds to each `badge_01`, `badge_02`, etc. printed by
@@ -83,8 +83,11 @@ does not correct observer reaction time or BLE latency. Configure it explicitly:
 negative shifts them earlier. Choose offsets using a separate synchronization
 exercise, not by maximizing model agreement. Do not use a boundary margin so
 large that it removes the short turns you need to evaluate. Device timestamps
-are retained, but alignment here uses PC arrival timestamps and observer UTC
-timestamps, so transport latency and human reaction time remain limitations.
+are retained. V2 capture reconstructs acquisition-time `Timestamp` from a PC
+clock anchor and keeps bulk arrival time separately. Alignment uses this
+acquisition estimate and observer UTC time; one-way clock-command delay, drift,
+and human reaction time remain limitations. Legacy firmware uses arrival time
+instead and should not be used for bulk/observer alignment.
 
 ## Compare the badge detector against the observer
 

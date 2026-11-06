@@ -9,14 +9,25 @@ the legacy badge. Sound is mean-square microphone power divided by two,
 approximating the legacy full-block convention while avoiding its overflow.
 Numerical equivalence to historical sound data is not claimed.
 
-Firmware samples summaries at 10 Hz. A 600-observation history approximates
-time-based windows while sampling stays regular. Startup requires ten readings;
+Firmware acquires motion at 200 Hz by default, configurable to 10/50/100/200 Hz.
+It uses the reference folder's combined IMU read, 400 kHz bus, and raised ODR.
+A 600-observation history refreshed at about 10 Hz approximates time-based
+windows while sampling stays regular. Startup requires ten baseline readings;
 missing data resets history. No future samples are used for normalization.
 The badge sends a score and local candidate flag. Only the PC can compare badges.
-The receiver selects the highest eligible sample per 500 ms arrival-time bin,
+The receiver selects the highest eligible sample per 500 ms acquisition-time bin,
 then applies a centered five-bin vote requiring three wins. It writes labeled
 CSV for downstream feature extraction. Legacy run-length post-processing is
 not part of this streaming detector.
+
+High-priority acquisition fills a 128-sample SPSC queue; a separate processing
+thread updates the history at 10 Hz and evaluates every acquired sample using
+the cached baseline. Acceleration uses a nearest available 100 ms lag. A second
+1,536-record SPSC queue feeds bulk BLE packets from loop(), with early draining
+at 75% capacity and counted drops on overflow. Output defaults to every 5 s.
+STOP pauses acquisition and acknowledges only after both queues and in-flight
+processing drain. The PC maps acquisition milliseconds to UTC with a connection
+clock anchor, keeping arrival time separately. Clock delay/drift remain unknown.
 
 The default is the deterministic paper rule, requiring no training. An optional
 shallow decision tree learns from normalized sound, normalized acceleration,
@@ -37,7 +48,7 @@ artifacts are ignored by git. Engagement inference stays on the PC.
 The independent PC reference uses an observer-only Tkinter panel. Per-badge
 states support overlapping speakers and explicit unknown intervals. State
 changes and one-second checkpoints save half-open UTC intervals. Focus loss
-pauses annotation. Merge by recording/badge and PC arrival timestamp, preserving
+pauses annotation. Merge by recording/badge and estimated acquisition timestamp, preserving
 unknown time and excluding a configurable transition margin. Evaluate only
 annotated samples; prediction output is hidden from the observer panel.
 
