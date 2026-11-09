@@ -76,6 +76,9 @@ Acquisition feeds a 128-sample processing queue. Processed predictions and senso
 features enter a separate 1,536-record output queue. BLE sends binary packets
 of up to three records, independent of acquisition. Default sending is every
 five seconds. `--send-seconds 0` sends immediately; values up to 600 are accepted.
+The sender yields for 12 ms between BLE packets/replies; acquisition and inference
+continue in their own threads. Configuration commands use separate acknowledged
+writes, with the clock anchor taken after rate/send configuration completes.
 Sending starts early at 1,152 queued records, approximately 5.76 s at 200 Hz or
 11.52 s at 100 Hz, so requesting a longer interval does not increase buffer size.
 If processing or BLE cannot keep up, new samples are dropped and counters advance;
@@ -208,17 +211,18 @@ Raw CSVs contain behavioral data and remain local under ignored `outputs/`.
 Training data belongs in ignored `data/`. Generated model headers and evaluation
 artifacts are also ignored. Nothing is uploaded to a training service.
 
-The first release needs physical-board checks for sampling cadence, sensor
-availability, BLE delivery with several badges, memory use, and power consumption.
+See the [single-board hardware check](HARDWARE_CHECK.md) for measured sampling
+and BLE delivery. Multi-badge delivery, long-duration stability, runtime memory
+headroom, power use, and speech-detection accuracy still need measurement.
 
 Validation performed: twenty-seven workflow pytest checks and the three existing paper
 validation checks passed. Both paper-only and synthetic-model firmware builds
 compiled with Arduino Mbed Nano core 4.6.0. The synthetic model checked the export
-and compilation path only; no trained speech model is included. No firmware was
-uploaded and no physical badge or BLE collection was tested.
+and compilation path only; no trained speech model is included. Paper-rule
+firmware was uploaded and BLE collection tested on one physical Rev2 board.
 The v2 paper-only build used 366,408 bytes of flash and 193,096 bytes of static
-RAM. Runtime stacks, heap use, sustained sampling, and BLE throughput remain
-hardware checks. Receiver tests cover bulk packet validation, clock wrapping,
+RAM. Runtime stacks, heap use, and throughput with other adapters or several
+badges remain hardware checks. Receiver tests cover bulk packet validation, clock wrapping,
 delayed delivery, sequence gaps, and final draining on normal completion/cancellation.
 The native observer panel was rendered with synthetic badge IDs, and its
 state transitions and annotation merge/evaluation path were checked. Human

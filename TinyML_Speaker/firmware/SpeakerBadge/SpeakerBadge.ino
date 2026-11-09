@@ -45,6 +45,7 @@ uint32_t sampleSeq = 0, nextSend = 0, sendInterval = 5000, burstRemaining = 0;
 uint16_t sampleRate = 200;
 bool stopping = false;
 String commandBuffer;
+const uint32_t BLE_PACKET_SPACING_MS = 12;
 
 void audioReceived() {
   int bytes = min(PDM.available(), static_cast<int>(sizeof(audio)));
@@ -171,7 +172,10 @@ void processSamples() {
 }
 
 void reply(const char *text) {
-  if (readings.subscribed()) readings.writeValue(reinterpret_cast<const uint8_t *>(text), strlen(text));
+  if (readings.subscribed()) {
+    readings.writeValue(reinterpret_cast<const uint8_t *>(text), strlen(text));
+    rtos::ThisThread::sleep_for(BLE_PACKET_SPACING_MS);
+  }
 }
 
 void modelIdentity() {
@@ -259,6 +263,8 @@ void drainBulk() {
     outputQueue.consume(count);
     burstRemaining -= count;
     BLE.poll();
+    // Yield only the sender; acquisition and inference keep their own cadence.
+    rtos::ThisThread::sleep_for(BLE_PACKET_SPACING_MS);
   }
   if (stopping && samplerIdle.load() && !rawQueue.size() && processingIdle.load() && !outputQueue.size()) {
     reply("D\n");
@@ -267,6 +273,7 @@ void drainBulk() {
 }
 
 void setup() {
+  Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
   if (!sensors.begin() || !sensors.setRate(sampleRate) || !BLE.begin()) {
     while (true) { digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); delay(200); }

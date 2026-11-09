@@ -114,10 +114,12 @@ def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, c
             if data == b'STOP\n':
                 self.callback(None, packet(seq=12, device_ms=1010))
                 self.callback(None, b'D\n')
-            else:
+            elif data.startswith(b'CLOCK '):
                 self.callback(None, b'M,synthetic-model\nC,1000,1767225600000\n')
                 self.callback(None, packet())
                 ready.set()
+            else:
+                self.callback(None, b'OK,configured\n')
 
     monkeypatch.setattr(bleak, 'BleakScanner', Scanner)
     monkeypatch.setattr(bleak, 'BleakClient', Client)
@@ -140,7 +142,9 @@ def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, c
     assert list(frame.seq) == [10, 11, 12, 13]
     assert frame.seq_gap.sum() == 0
     assert set(frame.Clock_Source) == {'device_anchor'}
-    assert 'RATE 200\nSEND 2000\nCLOCK ' in commands[0]
+    assert commands[0] == 'RATE 200\n'
+    assert commands[1] == 'SEND 2000\n'
+    assert commands[2].startswith('CLOCK ')
     assert commands[-1] == 'STOP\n'
     if not cancel:
         assert len(pd.read_csv(next(tmp_path.glob('*_labeled.csv')))) == 4

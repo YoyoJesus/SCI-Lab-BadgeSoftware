@@ -286,7 +286,9 @@ async def receive(args: argparse.Namespace) -> None:
                 await client.start_notify(CHARACTERISTIC, lambda _, data, badge=badge: on_data(badge, data))
                 if client.services.get_characteristic(CONTROL):
                     controlled[badge] = client
-                    command = f'RATE {args.rate}\nSEND {round(args.send_seconds * 1000)}\nCLOCK {time.time_ns() // 1000000}\n'
+                    for command in [f'RATE {args.rate}\n', f'SEND {round(args.send_seconds * 1000)}\n']:
+                        await client.write_gatt_char(CONTROL, command.encode('ascii'), response=True)
+                    command = f'CLOCK {time.time_ns() // 1000000}\n'
                     await client.write_gatt_char(CONTROL, command.encode('ascii'), response=True)
                     deadline = time.monotonic() + 5
                     while sessions[badge].clock is None and time.monotonic() < deadline:
