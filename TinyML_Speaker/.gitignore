@@ -1,0 +1,7 @@
+.venv/
+.tools/
+data/
+outputs/
+firmware/SpeakerBadge/model.h
+firmware/SpeakerBadge/badge_name.h
+*.wav
