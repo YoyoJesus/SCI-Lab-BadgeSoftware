@@ -1,92 +1,115 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="610" viewBox="0 0 1200 610" font-family="Helvetica, Arial, sans-serif"><defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/></marker></defs><rect width="1200" height="610" fill="#ffffff"/><rect x="10" y="10" width="1180" height="215" rx="10" fill="#eef3f8" stroke="#cbd2d9"/>
-<text x="26" y="32" font-size="12" font-weight="bold" fill="#52606d" text-anchor="start">ON EACH BADGE  (Arduino Nano 33 BLE Sense Rev2, causal, no future samples)</text>
-<rect x="28" y="44" width="212" height="120" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="40" y="67" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">1  Sensing</text>
-<text x="40" y="89" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">PDM microphone, IMU at 200 Hz</text>
-<text x="40" y="107" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Sound = mean-square power / 2</text>
-<text x="40" y="125" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Accel = Σ|Δaxis| in g, 100 ms lag</text>
-<text x="40" y="143" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Raw audio never leaves the badge</text>
-<rect x="261" y="44" width="212" height="120" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="273" y="67" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">2  Rolling baseline</text>
-<text x="273" y="89" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Last 600 readings at 10 Hz (~60 s)</text>
-<text x="273" y="107" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Sound quartiles Q<tspan dy="3" font-size="9">25</tspan><tspan dy="-3">, Q</tspan><tspan dy="3" font-size="9">45</tspan><tspan dy="-3">, Q</tspan><tspan dy="3" font-size="9">75</tspan><tspan dy="-3"></tspan></text>
-<text x="273" y="125" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Accel quartiles Q<tspan dy="3" font-size="9">25</tspan><tspan dy="-3">, Q</tspan><tspan dy="3" font-size="9">75</tspan><tspan dy="-3"></tspan></text>
-<text x="273" y="143" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Starts after 10 readings</text>
-<rect x="494" y="44" width="212" height="120" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="506" y="67" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">3  Normalize and score</text>
-<text x="506" y="89" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">n<tspan dy="3" font-size="9">s</tspan><tspan dy="-3"> = (sound − Q</tspan><tspan dy="3" font-size="9">25</tspan><tspan dy="-3">) / max(IQR</tspan><tspan dy="3" font-size="9">s</tspan><tspan dy="-3">, 1)</tspan></text>
-<text x="506" y="107" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">n<tspan dy="3" font-size="9">a</tspan><tspan dy="-3"> = (accel − Q</tspan><tspan dy="3" font-size="9">25</tspan><tspan dy="-3">) / max(IQR</tspan><tspan dy="3" font-size="9">a</tspan><tspan dy="-3">, 1)</tspan></text>
-<text x="506" y="125" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">s = n<tspan dy="3" font-size="9">s</tspan><tspan dy="-3"> + 1.2 · clip(n</tspan><tspan dy="3" font-size="9">a</tspan><tspan dy="-3">, 0, 2.5)</tspan></text>
-<text x="506" y="143" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">m = (1 s mean − Q<tspan dy="3" font-size="9">45</tspan><tspan dy="-3">) / max(IQR</tspan><tspan dy="3" font-size="9">s</tspan><tspan dy="-3">, 1)</tspan></text>
-<rect x="727" y="44" width="212" height="120" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="739" y="67" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">4  Local candidate</text>
-<text x="739" y="89" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">s ≥ 0.75  and  (m &gt; 0  or  s ≥ 3.5)</text>
-<text x="739" y="107" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Optional tree: confidence ≥ 0.6</text>
-<text x="739" y="125" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">replaces this flag when flashed</text>
-<text x="739" y="143" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Badge LED follows the candidate</text>
-<rect x="960" y="44" width="212" height="120" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="972" y="67" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">5  Stream to PC</text>
-<text x="972" y="89" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">1,536-record send queue</text>
-<text x="972" y="107" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">BLE bulk packet every 5 s</text>
-<text x="972" y="125" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Score, candidate, sensor scalars</text>
-<text x="972" y="143" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Queue overflow drops are counted</text>
-<path d="M240,104.0 L259,104.0" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<path d="M473,104.0 L492,104.0" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<path d="M706,104.0 L725,104.0" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<path d="M939,104.0 L958,104.0" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<text x="600" y="196" font-size="11.5" font-weight="normal" fill="#52606d" text-anchor="middle">Paper rule: no training required. Every acquired sample is scored against the cached baseline.</text>
-<path d="M1066.0,164 L1066.0,245 L157,245 L157,303" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<rect x="525.0" y="237" width="190" height="17" fill="#ffffff"/>
-<text x="620" y="249" font-size="11" font-weight="normal" fill="#52606d" text-anchor="middle">BLE, all badges in parallel</text>
-<rect x="10" y="262" width="1180" height="338" rx="10" fill="#f6f4ef" stroke="#cbd2d9"/>
-<text x="26" y="284" font-size="12" font-weight="bold" fill="#52606d" text-anchor="start">ON THE PC  (receiver, cross-badge decision, ground truth, evaluation)</text>
-<rect x="25" y="305" width="265" height="115" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="37" y="328" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">6  Receiver</text>
-<text x="37" y="350" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Connects every badge, retries drops</text>
-<text x="37" y="368" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Maps device ms to UTC with a</text>
-<text x="37" y="386" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">per-connection clock anchor</text>
-<text x="37" y="404" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Writes raw per-sample CSV</text>
-<rect x="320" y="305" width="265" height="115" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="332" y="328" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">7  Cross-badge selection</text>
-<text x="332" y="350" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">500 ms acquisition-time bins</text>
-<text x="332" y="368" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Bin winner: the eligible badge</text>
-<text x="332" y="386" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">(candidate = 1) with the highest s</text>
-<text x="332" y="404" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">No eligible badge: no winner</text>
-<rect x="615" y="305" width="265" height="115" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="627" y="328" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">8  Temporal vote</text>
-<text x="627" y="350" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Centered window of 5 bins</text>
-<text x="627" y="368" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Speaker = winner of ≥ 3 of 5 bins</text>
-<text x="627" y="386" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Otherwise no speaker for the bin</text>
-<text x="627" y="404" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Only the PC compares badges</text>
-<rect x="910" y="305" width="265" height="115" rx="6" fill="#ffffff" stroke="#7b8794" stroke-width="1.2"/>
-<text x="922" y="328" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">9  Output</text>
-<text x="922" y="350" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Labeled CSV per sample</text>
-<text x="922" y="368" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Speaker label per 500 ms bin</text>
-<text x="922" y="386" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Input to downstream feature</text>
-<text x="922" y="404" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">extraction and engagement models</text>
-<path d="M290,362.5 L318,362.5" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<path d="M585,362.5 L613,362.5" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<path d="M880,362.5 L908,362.5" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<rect x="25" y="465" width="265" height="115" rx="6" fill="#fffdf7" stroke="#7b8794" stroke-width="1.2"/>
-<text x="37" y="488" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">A  Observer reference</text>
-<text x="37" y="510" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Independent observer panel</text>
-<text x="37" y="528" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Per badge: Speaking / Quiet / Unknown</text>
-<text x="37" y="546" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Detections hidden while recording</text>
-<text x="37" y="564" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Intervals saved every 0.2 s</text>
-<rect x="320" y="465" width="265" height="115" rx="6" fill="#fffdf7" stroke="#7b8794" stroke-width="1.2"/>
-<text x="332" y="488" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">B  Merge</text>
-<text x="332" y="510" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Match by recording, badge, and</text>
-<text x="332" y="528" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">estimated acquisition time</text>
-<text x="332" y="546" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Unknown time is excluded</text>
-<text x="332" y="564" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">Optional transition margin</text>
-<rect x="615" y="465" width="560" height="115" rx="6" fill="#fffdf7" stroke="#7b8794" stroke-width="1.2"/>
-<text x="627" y="488" font-size="13" font-weight="bold" fill="#1f4e79" text-anchor="start">C  Evaluation on held-out whole recordings</text>
-<text x="627" y="510" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">1. Paper rule (steps 1 to 8, no training)</text>
-<text x="627" y="528" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">2. Shallow decision tree on paper features (n<tspan dy="3" font-size="9">s</tspan><tspan dy="-3">, n</tspan><tspan dy="3" font-size="9">a</tspan><tspan dy="-3">, m)</tspan></text>
-<text x="627" y="546" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">3. Shallow decision tree on all 9 features (adds gyro and magnetic magnitude,</text>
-<text x="627" y="564" font-size="11.5" font-weight="normal" fill="#1f2933" text-anchor="start">    temperature, humidity, pressure, proximity); exported to C++ for step 4</text>
-<path d="M290,522.5 L318,522.5" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<path d="M585,522.5 L613,522.5" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<path d="M255,420 L255,443 L380,443 L380,463" fill="none" stroke="#1f2933" stroke-width="1.4" marker-end="url(#head)"/>
-<rect x="265.0" y="435" width="80" height="17" fill="#ffffff"/>
-<text x="305" y="447" font-size="11" font-weight="normal" fill="#52606d" text-anchor="middle">raw samples</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1610" height="640" viewBox="0 0 1610 640" font-family="Helvetica, Arial, sans-serif"><defs><marker id="h2b2b2b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b2b2b"/></marker><marker id="h5b63c9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b63c9"/></marker></defs><rect width="1610" height="640" fill="#ffffff"/><polygon points="30,20 796,20 810,38 796,56 30,56 30,38" fill="#5b6fd8"/>
+<text x="420.0" y="43" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle" font-style="normal">ON EACH BADGE  (paper rule, causal)</text>
+<polygon points="822,20 1206,20 1220,38 1206,56 822,56 836,38" fill="#d9873f"/>
+<text x="1021.0" y="43" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle" font-style="normal">ON THE PC</text>
+<polygon points="1232,20 1586,20 1600,38 1586,56 1232,56 1246,38" fill="#a83232"/>
+<text x="1416.0" y="43" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle" font-style="normal">GROUND TRUTH AND EVALUATION</text>
+<rect x="50" y="100" width="740" height="470" rx="8" fill="#eceef8" stroke="#2b2b2b" stroke-width="2.2"/>
+<rect x="40" y="90" width="740" height="470" rx="8" fill="#eceef8" stroke="#2b2b2b" stroke-width="2.2"/>
+<rect x="30" y="80" width="740" height="470" rx="8" fill="#eceef8" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="40" y="594" font-size="15" font-weight="bold" fill="#2b2b2b" text-anchor="start" font-style="normal">× N badges (one per wearer)</text>
+<rect x="55" y="150" width="120" height="56" rx="5" fill="#f19c99" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="115.0" y="174.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Microphone</text>
+<text x="115.0" y="190.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">PDM</text>
+<rect x="55" y="380" width="120" height="56" rx="5" fill="#f19c99" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="115.0" y="404.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">IMU</text>
+<text x="115.0" y="420.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">200 Hz</text>
+<rect x="205" y="150" width="120" height="56" rx="5" fill="#f6e7a1" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="265.0" y="174.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Sound level</text>
+<text x="265.0" y="190.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">mean-square / 2</text>
+<rect x="205" y="380" width="120" height="56" rx="5" fill="#f6e7a1" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="265.0" y="404.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Motion</text>
+<text x="265.0" y="420.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">Σ|Δaxis| in g</text>
+<rect x="345" y="265" width="150" height="56" rx="5" fill="#c3d9f5" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="420.0" y="289.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Rolling baseline</text>
+<text x="420.0" y="305.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">last 60 s, quartiles</text>
+<rect x="355" y="150" width="130" height="56" rx="5" fill="#91dde0" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="420.0" y="174.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Normalize</text>
+<text x="420.0" y="190.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">n<tspan dy="3" font-size="0.75em">s</tspan><tspan dy="-3"> = (x − Q</tspan><tspan dy="3" font-size="0.75em">25</tspan><tspan dy="-3">) / IQR</tspan></text>
+<rect x="355" y="380" width="130" height="56" rx="5" fill="#91dde0" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="420.0" y="404.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Normalize</text>
+<text x="420.0" y="420.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">n<tspan dy="3" font-size="0.75em">a</tspan><tspan dy="-3"> = (x − Q</tspan><tspan dy="3" font-size="0.75em">25</tspan><tspan dy="-3">) / IQR</tspan></text>
+<rect x="525" y="380" width="130" height="56" rx="5" fill="#f5c18f" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="590.0" y="404.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Weight</text>
+<text x="590.0" y="420.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">1.2 · clip(n<tspan dy="3" font-size="0.75em">a</tspan><tspan dy="-3">, 0, 2.5)</tspan></text>
+<rect x="640" y="150" width="118" height="64" rx="5" fill="#cdeeb2" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="699.0" y="170.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Speaking?</text>
+<text x="699.0" y="186.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">s ≥ 0.75 and</text>
+<text x="699.0" y="202.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">(m &gt; 0 or s ≥ 3.5)</text>
+<rect x="640" y="450" width="118" height="56" rx="5" fill="#a6aef0" stroke="#2b2b2b" stroke-width="2.2" stroke-dasharray="6 4"/>
+<text x="699.0" y="474.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Decision tree</text>
+<text x="699.0" y="490.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">optional, p ≥ 0.6</text>
+<path d="M175,178 L203,178" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M175,408 L203,408" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M325,178 L353,178" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M325,408 L353,408" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M265,206 L265,283 L343,283" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M265,380 L265,303 L343,303" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M420,265 L420,208" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M420,321 L420,378" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M485,408 L523,408" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M485,178 L574,178" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M590,380 L590,194" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M495,293 L690,293" stroke="#eceef8" stroke-width="8"/>
+<path d="M495,293 L690,293 L690,216" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<rect x="599.2" y="276" width="85.6" height="17" fill="#eceef8"/>
+<text x="642" y="288" font-size="11.5" font-weight="bold" fill="#5f6b7a" text-anchor="middle" font-style="normal">m (presence)</text>
+<circle cx="590" cy="178" r="14" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/><path d="M581,178 L599,178 M590,169 L590,187" stroke="#2b2b2b" stroke-width="2"/>
+<path d="M604,178 L638,178" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<text x="620" y="170" font-size="14" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="italic">s</text>
+<path d="M730,450 L730,216" fill="none" stroke="#5b63c9" stroke-width="2" marker-end="url(#h5b63c9)"/>
+<path d="M700,150 L700,130" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<circle cx="700" cy="119" r="10" fill="#ffd54a" stroke="#2b2b2b" stroke-width="2"/>
+<text x="717" y="124" font-size="12" font-weight="bold" fill="#2b2b2b" text-anchor="start" font-style="normal">LED</text>
+<text x="400" y="535" font-size="12" font-weight="normal" fill="#5f6b7a" text-anchor="middle" font-style="italic">Uses only past samples. Raw audio never leaves the badge.</text>
+<rect x="920" y="80" width="290" height="470" rx="8" fill="#f5ece2" stroke="#2b2b2b" stroke-width="2.2"/>
+<rect x="995" y="150" width="140" height="56" rx="5" fill="#c3d9f5" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="1065.0" y="174.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Receiver</text>
+<text x="1065.0" y="190.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">clock anchor → UTC</text>
+<rect x="995" y="255" width="140" height="56" rx="5" fill="#f5c18f" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="1065.0" y="279.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Pick top s</text>
+<text x="1065.0" y="295.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">per 500 ms bin</text>
+<rect x="995" y="360" width="140" height="56" rx="5" fill="#f6e7a1" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="1065.0" y="384.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Vote</text>
+<text x="1065.0" y="400.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">≥ 3 of 5 bins</text>
+<rect x="995" y="465" width="140" height="56" rx="5" fill="#cdeeb2" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="1065.0" y="489.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Speaker label</text>
+<text x="1065.0" y="505.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">per 500 ms bin</text>
+<path d="M1065,206 L1065,253" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M1065,311 L1065,358" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M1065,416 L1065,463" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<text x="1065" y="125" font-size="11.5" font-weight="normal" fill="#5f6b7a" text-anchor="middle" font-style="italic">Only the PC compares badges</text>
+<rect x="1300" y="80" width="290" height="470" rx="8" fill="#ffffff" stroke="#a83232" stroke-width="2.4" stroke-dasharray="10 6"/>
+<rect x="1375" y="150" width="140" height="56" rx="5" fill="#f19c99" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="1445.0" y="174.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Observer labels</text>
+<text x="1445.0" y="190.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">saved every 0.2 s</text>
+<rect x="1375" y="255" width="140" height="56" rx="5" fill="#f6e7a1" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="1445.0" y="279.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Merge</text>
+<text x="1445.0" y="295.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">by badge + time</text>
+<rect x="1375" y="360" width="140" height="56" rx="5" fill="#a6aef0" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="1445.0" y="384.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Compare</text>
+<text x="1445.0" y="400.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">held-out recordings</text>
+<path d="M1445,206 L1445,253" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M1445,311 L1445,358" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M1445,416 L1445,437" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<rect x="1345" y="440" width="200" height="22" rx="11" fill="#ffffff" stroke="#2b2b2b" stroke-width="1.4"/>
+<text x="1445" y="455.5" font-size="11.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Paper rule</text>
+<rect x="1345" y="468" width="200" height="22" rx="11" fill="#ffffff" stroke="#2b2b2b" stroke-width="1.4"/>
+<text x="1445" y="483.5" font-size="11.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Tree, paper features</text>
+<rect x="1345" y="496" width="200" height="22" rx="11" fill="#ffffff" stroke="#2b2b2b" stroke-width="1.4"/>
+<text x="1445" y="511.5" font-size="11.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Tree, all 9 features</text>
+<path d="M1135,178 L1255,178 L1255,283 L1373,283" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<rect x="1161.0" y="160" width="72" height="17" fill="#ffffff"/>
+<text x="1197" y="172" font-size="11" font-weight="bold" fill="#5f6b7a" text-anchor="middle" font-style="normal">raw samples</text>
+<path d="M1135,493 L1260,493 L1260,388 L1373,388" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<rect x="1161.0" y="475" width="72" height="17" fill="#ffffff"/>
+<text x="1197" y="487" font-size="11" font-weight="bold" fill="#5f6b7a" text-anchor="middle" font-style="normal">predictions</text>
+<path d="M758,182 L993,182" fill="none" stroke="#2b2b2b" stroke-width="2.6" marker-end="url(#h2b2b2b)"/>
+<rect x="850.55" y="160" width="28.9" height="17" fill="#ffffff"/>
+<text x="865" y="172" font-size="13" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">BLE</text>
+<text x="865" y="202" font-size="11.5" font-weight="normal" fill="#5f6b7a" text-anchor="middle" font-style="normal">score, flag,</text>
+<text x="865" y="217" font-size="11.5" font-weight="normal" fill="#5f6b7a" text-anchor="middle" font-style="normal">sensor scalars</text>
+<text x="865" y="232" font-size="11.5" font-weight="normal" fill="#5f6b7a" text-anchor="middle" font-style="normal">every 5 s</text>
+<path d="M1445,518 L1445,612 L699,612 L699,508" fill="none" stroke="#5b63c9" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#h5b63c9)"/>
+<rect x="904.35" y="604" width="331.3" height="17" fill="#ffffff"/>
+<text x="1070" y="616" font-size="12" font-weight="bold" fill="#5b63c9" text-anchor="middle" font-style="normal">train tree, export to C++, reflash badge (optional)</text></svg>
