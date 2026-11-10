@@ -158,3 +158,76 @@ def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, m
     assert any(kind == 'connected' and payload['badges'] == ['badge_01'] for kind, payload in events)
     if not cancel:
         assert len(pd.read_csv(next(tmp_path.glob('*_labeled.csv')))) == 4
+
+
+def test_receiver_skips_unreachable_badge_and_reconnects_dropped_one(tmp_path, monkeypatch):
+    import argparse
+    import asyncio
+    from types import SimpleNamespace
+    import bleak
+    import pandas as pd
+    import pipeline
+    from threading import Event
+    monkeypatch.setattr(pipeline, 'RETRY_SECONDS', 0)
+    stopped = Event()
+    events = []
+    commands = {'good': [], 'down': []}
+    connects = {'good': 0, 'down': 0}
+
+    class Scanner:
+        @staticmethod
+        async def discover(**kwargs):
+            return [SimpleNamespace(address=name, name='test') for name in ['good', 'down']]
+
+    class Client:
+        current = None
+
+        def __init__(self, device):
+            self.address = device.address
+            self.is_connected = False
+            self.services = SimpleNamespace(get_characteristic=lambda uuid: True)
+
+        async def connect(self):
+            connects[self.address] += 1
+            if self.address == 'down':
+                raise TimeoutError('synthetic unreachable badge')
+            self.is_connected = True
+            Client.current = self
+
+        async def disconnect(self):
+            self.is_connected = False
+
+        async def start_notify(self, characteristic, callback):
+            self.callback = callback
+
+        async def write_gatt_char(self, characteristic, data, response):
+            commands[self.address].append(data.decode())
+            if data.startswith(b'CLOCK '):
+                seq = 10 if connects['good'] == 1 else 20
+                self.callback(None, b'C,1000,1767225600000\n')
+                self.callback(None, packet(seq=seq, device_ms=1000 + (seq - 10) * 5))
+            elif data == b'STOP\n':
+                self.callback(None, b'D\n')
+            else:
+                self.callback(None, b'OK,configured\n')
+
+    def on_event(kind, payload):
+        events.append((kind, payload))
+        if kind == 'connected':
+            Client.current.is_connected = False  # Simulate a mid-session drop.
+        elif kind == 'link' and payload['state'] == 'connected':
+            stopped.set()
+
+    monkeypatch.setattr(bleak, 'BleakScanner', Scanner)
+    monkeypatch.setattr(bleak, 'BleakClient', Client)
+    args = argparse.Namespace(scan=False, address=None, output=tmp_path, recording_id='test',
+                              rate=200, send_seconds=2, seconds=10, raw_only=True)
+    asyncio.run(asyncio.wait_for(pipeline.receive(args, on_event=on_event, stop_event=stopped), timeout=10))
+    connected = next(payload for kind, payload in events if kind == 'connected')
+    assert connected['badges'] == ['badge_01'] and connected['failed'] == ['badge_02']
+    assert connects['down'] == pipeline.CONNECT_ATTEMPTS
+    assert [payload['state'] for kind, payload in events if kind == 'link'] == ['reconnecting', 'connected']
+    assert [c.split()[0] for c in commands['good']] == ['RATE', 'SEND', 'CLOCK', 'CLOCK', 'STOP']
+    frame = pd.read_csv(next(tmp_path.glob('*_raw.csv')))
+    assert list(frame.seq) == [10, 11, 20, 21]
+    assert list(frame.seq_gap) == [0, 0, 8, 0]

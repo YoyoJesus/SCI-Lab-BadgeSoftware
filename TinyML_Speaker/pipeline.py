@@ -19,6 +19,8 @@ from sklearn.tree import DecisionTreeClassifier
 ROOT = Path(__file__).resolve().parent
 SERVICE = 'e8310001-65d2-4b11-91e0-87f64f931c82'
 CHARACTERISTIC = 'e8310002-65d2-4b11-91e0-87f64f931c82'
+CONNECT_ATTEMPTS = 3
+RETRY_SECONDS = 2.0
 FEATURES = ['norm_sound', 'norm_accel', 'presence_margin', 'Gyro_Magnitude',
             'Mag_Magnitude', 'Temperature', 'Humidity', 'Pressure', 'Proximity']
 FIELDS = ['seq', 'device_ms', 'Sound_Level', 'Acceleration', 'norm_sound',
@@ -256,7 +258,8 @@ async def receive(args: argparse.Namespace, on_event: Optional[Callable[[str, di
     sessions: dict[str, BulkSession] = {}
     controlled: dict[str, BleakClient] = {}
     errors: list[str] = []
-    clients = []
+    clients: dict[str, BleakClient] = {}
+    reconnecting: dict[str, asyncio.Task] = {}
     sample_count = 0
     device_map = {}
     def emit(kind: str, payload: dict) -> None:
@@ -285,44 +288,94 @@ async def receive(args: argparse.Namespace, on_event: Optional[Callable[[str, di
             except (ValueError, OSError) as error:
                 errors.append(f'{badge}: {error}')
 
+        async def configure(badge: str, client: BleakClient, first: bool) -> None:
+            await client.start_notify(CHARACTERISTIC, lambda _, data, badge=badge: on_data(badge, data))
+            if not client.services.get_characteristic(CONTROL):
+                print(f'{badge}: legacy firmware; timestamps are BLE arrival times, rate settings unavailable')
+                return
+            controlled[badge] = client
+            # A reconnecting badge keeps sampling at its configured rate; only refresh its clock anchor.
+            commands = [f'RATE {args.rate}\n', f'SEND {round(args.send_seconds * 1000)}\n'] if first else []
+            for command in commands:
+                await client.write_gatt_char(CONTROL, command.encode('ascii'), response=True)
+            sessions[badge].clock = None
+            sessions[badge].text = ''
+            command = f'CLOCK {time.time_ns() // 1000000}\n'
+            await client.write_gatt_char(CONTROL, command.encode('ascii'), response=True)
+            deadline = time.monotonic() + 5
+            while sessions[badge].clock is None and time.monotonic() < deadline:
+                if errors:
+                    raise ValueError(errors[0])
+                await asyncio.sleep(.02)
+            if sessions[badge].clock is None:
+                raise ConnectionError(f'{badge}: clock handshake timed out')
+
+        async def connect(badge: str, device, first: bool) -> bool:
+            for attempt in range(1, CONNECT_ATTEMPTS + 1):
+                client = BleakClient(device)
+                try:
+                    print(f'{badge}: connecting to {device.address} (attempt {attempt}/{CONNECT_ATTEMPTS})')
+                    await client.connect()
+                    await configure(badge, client, first)
+                    clients[badge] = client
+                    return True
+                except Exception as error:
+                    if errors:
+                        raise
+                    print(f'{badge}: connection attempt failed: {type(error).__name__}: {error}')
+                    if client.is_connected:
+                        await client.disconnect()
+                    if attempt < CONNECT_ATTEMPTS:
+                        await asyncio.sleep(RETRY_SECONDS)
+            return False
+
+        async def reconnect(badge: str, device) -> None:
+            while not (stop_event and stop_event.is_set()):
+                if await connect(badge, device, first=False):
+                    emit('link', {'badge': badge, 'state': 'connected'})
+                    return
+                await asyncio.sleep(RETRY_SECONDS)
+
         try:
+            failed = []
             for i, device in enumerate(devices):
                 badge = f'badge_{i + 1:02d}'
                 device_map[badge] = device.address
-                print(f'{badge}: connecting to {device.address}')
-                client = BleakClient(device)
-                await client.connect()
-                clients.append(client)
                 sessions[badge] = BulkSession()
-                await client.start_notify(CHARACTERISTIC, lambda _, data, badge=badge: on_data(badge, data))
-                if client.services.get_characteristic(CONTROL):
-                    controlled[badge] = client
-                    for command in [f'RATE {args.rate}\n', f'SEND {round(args.send_seconds * 1000)}\n']:
-                        await client.write_gatt_char(CONTROL, command.encode('ascii'), response=True)
-                    command = f'CLOCK {time.time_ns() // 1000000}\n'
-                    await client.write_gatt_char(CONTROL, command.encode('ascii'), response=True)
-                    deadline = time.monotonic() + 5
-                    while sessions[badge].clock is None and time.monotonic() < deadline:
-                        if errors:
-                            raise ValueError(errors[0])
-                        await asyncio.sleep(.02)
-                    if sessions[badge].clock is None:
-                        raise ConnectionError(f'{badge}: clock handshake timed out')
-                else:
-                    print(f'{badge}: legacy firmware; timestamps are BLE arrival times, rate settings unavailable')
+                if not await connect(badge, device, first=True):
+                    failed.append(badge)
+                    del sessions[badge]
+                    controlled.pop(badge, None)
+            if not sessions:
+                raise ConnectionError('Could not connect to any selected badge')
+            if failed:
+                print(f'Not connected after {CONNECT_ATTEMPTS} attempts: {", ".join(failed)}')
             print(f'Recording scalar readings to {raw_path} for {args.seconds:g} seconds')
-            emit('connected', {'badges': list(sessions), 'devices': device_map})
+            emit('connected', {'badges': list(sessions), 'devices': device_map, 'failed': failed})
+            addresses = {badge: device for badge, device in zip(device_map, devices)}
             started = time.monotonic()
             while time.monotonic() - started < args.seconds and not (stop_event and stop_event.is_set()):
                 if errors:
                     raise ValueError(errors[0])
-                if any(not client.is_connected for client in clients):
-                    raise ConnectionError('Badge disconnected; raw rows preserved, start a new recording')
+                for badge, client in clients.items():
+                    task = reconnecting.get(badge)
+                    if task and task.done():
+                        task.result()
+                        del reconnecting[badge]
+                    elif not client.is_connected and not task:
+                        print(f'{badge}: disconnected; reconnecting while other badges keep recording')
+                        emit('link', {'badge': badge, 'state': 'reconnecting'})
+                        reconnecting[badge] = asyncio.create_task(reconnect(badge, addresses[badge]))
                 await asyncio.sleep(.2)
         finally:
+            for task in reconnecting.values():
+                task.cancel()
+            await asyncio.gather(*reconnecting.values(), return_exceptions=True)
             try:
                 live = {badge: client for badge, client in controlled.items() if client.is_connected}
                 if not errors:
+                    for badge in set(controlled) - set(live):
+                        print(f'{badge}: disconnected at stop; its buffered samples were not drained')
                     for client in live.values():
                         await client.write_gatt_char(CONTROL, b'STOP\n', response=True)
                     deadline = time.monotonic() + 15
@@ -333,7 +386,8 @@ async def receive(args: argparse.Namespace, on_event: Optional[Callable[[str, di
                             raise ConnectionError('Final bulk drain failed; received raw rows preserved')
                         await asyncio.sleep(.05)
             finally:
-                await asyncio.gather(*(client.disconnect() for client in clients if client.is_connected), return_exceptions=True)
+                await asyncio.gather(*(client.disconnect() for client in clients.values() if client.is_connected),
+                                     return_exceptions=True)
                 if sample_count and not args.raw_only:
                     labeled = raw_path.with_name(f'{stamp}_labeled.csv')
                     label_frame(pd.read_csv(raw_path)).to_csv(labeled, index=False)

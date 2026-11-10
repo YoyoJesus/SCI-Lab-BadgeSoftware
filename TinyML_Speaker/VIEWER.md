@@ -26,12 +26,18 @@ validate sensor performance. The screenshots below use this mode.
 ## Record and monitor
 
 1. Click **Scan BLE**, select the desired speaker badges, and verify their device
-   identities against the physical wearers. Multiple badges may be selected.
+   identities against the physical wearers. Select up to nine badges (Ctrl or
+   Shift for several). Windows Bluetooth adapters cap how many badges can be
+   connected at once; the exact limit depends on the adapter.
 2. Set an anonymous **Recording ID**, **Sample rate**, and **Send every** interval.
    These settings apply at recording start. Use the same ID for chunks of one
    session; use different IDs for independent sessions.
 3. Click **Start recording**. Every received sample is saved into a new session
    folder under ignored `outputs/`. **Open session folder** locates the files.
+   The **Link** column shows each badge as connected, reconnecting, or not
+   connected. A badge that fails three connection attempts is skipped and named
+   in the status line; the rest keep recording. A badge that drops reconnects on
+   its own. Mark it Unknown in the observer panel while it is reconnecting.
 4. Select sensor charts and adjust plot refresh or visible history as needed.
    Those controls affect drawing, not acquisition or CSV recording.
 5. Click **Stop and save** to stop the badge, drain its buffer, and disconnect.

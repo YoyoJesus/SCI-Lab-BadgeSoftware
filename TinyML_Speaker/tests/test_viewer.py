@@ -146,3 +146,20 @@ def test_plots_align_badges_by_acquisition_utc_not_individual_uptime(tmp_path, t
         assert list(lines[1].get_xdata()) == [-1, 0]
     finally:
         app.close()
+
+
+def test_viewer_lists_link_state_for_every_selected_badge(tmp_path, tk_window):
+    root = tk_window
+    app = SpeakerViewer(root, output_root=tmp_path)
+    try:
+        app.session_dir = tmp_path / 'session'
+        app.emit('connected', {'badges': ['badge_01', 'badge_03'], 'failed': ['badge_02'],
+                               'devices': {'badge_01': 'dev-1', 'badge_02': 'dev-2', 'badge_03': 'dev-3'}})
+        app.emit('link', {'badge': 'badge_03', 'state': 'reconnecting'})
+        app.poll()
+        links = {badge: app.table.set(badge, 'link') for badge in app.table.get_children()}
+        assert links == {'badge_01': 'connected', 'badge_02': 'not connected', 'badge_03': 'reconnecting'}
+        assert 'Not connected: badge_02 (dev-2)' in app.status.get()
+        assert app.observer.badges == ['badge_01', 'badge_03']
+    finally:
+        app.close()

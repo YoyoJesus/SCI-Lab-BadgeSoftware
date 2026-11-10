@@ -97,8 +97,13 @@ Clock mapping supports a device-millisecond wrap for sessions within 24 days
 of their anchor. `seq_gap` and cumulative `late_samples` expose missing samples.
 
 Normal completion and Ctrl+C request STOP, drain the processing/output queues,
-and await the badge's completion marker before disconnecting. A lost connection
-or forced process termination cannot recover unsent data. Use `--raw-only` for
+and await the badge's completion marker before disconnecting. Each badge gets
+three connection attempts; a badge that still fails is reported and skipped, and
+the others record. If a badge drops mid-session, the others keep recording while
+it reconnects and refreshes its clock anchor. The badge keeps sampling while
+disconnected, so its queue (about 7.7 seconds at 200 Hz) is sent after
+reconnecting; anything beyond that shows up as `seq_gap`. A badge still
+disconnected at stop, or a forced process termination, cannot recover unsent data. Use `--raw-only` for
 long high-rate captures to skip the final in-memory speaker-labeling pass; raw
 CSV recording itself does not retain all samples in a Python list.
 

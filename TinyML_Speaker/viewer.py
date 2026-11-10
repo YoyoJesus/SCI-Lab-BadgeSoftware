@@ -36,7 +36,7 @@ PLOTS = [
     ('Proximity', 'Proximity', 'counts', False),
 ]
 PREDICTIONS = {'speech_score', 'candidate', 'model_score'}
-COLUMNS = ('badge', 'device', 'rate', 'received', 'gaps', 'drops', 'candidate', 'model')
+COLUMNS = ('badge', 'device', 'link', 'rate', 'received', 'gaps', 'drops', 'candidate', 'model')
 
 
 def candidate_state(row: dict) -> str:
@@ -100,6 +100,7 @@ class SpeakerViewer:
         self.session_dir = self.raw_path = None
         self.devices: list[str] = []
         self.badge_devices: dict[str, str] = {}
+        self.links: dict[str, str] = {}
         self.session = tk.StringVar(value='session_01')
         self.rate = tk.StringVar(value='200')
         self.send = tk.StringVar(value='5')
@@ -130,7 +131,7 @@ class SpeakerViewer:
         controls = ttk.Frame(self.root, padding=(16, 4, 16, 10))
         controls.pack(fill='x')
         ttk.Label(controls, text='Badges (select one or more)').grid(row=0, column=0, sticky='w')
-        self.device_list = tk.Listbox(controls, height=3, width=39, selectmode='extended', exportselection=False, font=('Segoe UI', 10))
+        self.device_list = tk.Listbox(controls, height=5, width=39, selectmode='extended', exportselection=False, font=('Segoe UI', 10))
         self.device_list.grid(row=1, column=0, rowspan=3, sticky='nsew', padx=(0, 12))
         self.scan_button = ttk.Button(controls, text='Scan BLE', command=self.scan)
         self.scan_button.grid(row=4, column=0, sticky='w', pady=(5, 0))
@@ -158,8 +159,8 @@ class SpeakerViewer:
         ttk.Label(self.reference_pane, text='Observer labels become available once the badges connect.\n'
                   'Prediction charts are hidden while the observer panel is open.', padding=24).pack(anchor='w')
         self.table = ttk.Treeview(self.monitor_pane, columns=COLUMNS, show='headings', height=3)
-        for name, label, width in zip(COLUMNS, ['Badge', 'Device', 'Acquired Hz', 'Received', 'Seq gaps', 'New drops', 'Candidate', 'Model'],
-                                       [90, 170, 95, 100, 80, 100, 100, 130]):
+        for name, label, width in zip(COLUMNS, ['Badge', 'Device', 'Link', 'Acquired Hz', 'Received', 'Seq gaps', 'New drops',
+                                                'Candidate', 'Model'], [80, 150, 100, 90, 90, 75, 90, 100, 120]):
             self.table.heading(name, text=label)
             self.table.column(name, width=width, stretch=True)
         self.table.pack(fill='x', pady=(8, 6))
@@ -255,6 +256,7 @@ class SpeakerViewer:
         self.history = PlotHistory()
         self.preview_skips = 0
         self.table.delete(*self.table.get_children())
+        self.links = {}
         if self.observer and not self.observer.closed:
             self.observer.close()
         self.session_dir = self.output_root / f'{recording_id}_{datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")}'
@@ -333,11 +335,18 @@ class SpeakerViewer:
                 self.folder_button.configure(state='normal')
             elif kind == 'connected':
                 self.badge_devices = data.get('devices', {})
-                self.status.set('Recording. Charts update as each bulk transfer arrives.')
+                self.links = {badge: 'connected' for badge in data['badges']}
+                self.links.update({badge: 'not connected' for badge in data.get('failed', [])})
+                self.table.configure(height=len(self.links))
+                failed = ', '.join(f'{badge} ({self.badge_devices.get(badge, "")})' for badge in data.get('failed', []))
+                self.status.set(f'Recording {len(data["badges"])} badge(s). Not connected: {failed}.' if failed
+                                else f'Recording {len(data["badges"])} badge(s). Charts update as each bulk transfer arrives.')
                 try:
                     self.create_observer(data['badges'])
                 except (OSError, ValueError) as error:
                     self.status.set(f'Recording; observer labels unavailable: {error}')
+            elif kind == 'link':
+                self.links[data['badge']] = data['state']
             elif kind == 'finished':
                 self.saved.set(f'Saved {data["samples"]:,} samples to {Path(data["raw_path"]).name}')
             elif kind == 'merge_result':
@@ -369,14 +378,17 @@ class SpeakerViewer:
         self.poll_timer = self.root.after(50, self.poll)
 
     def update_table(self) -> None:
-        for badge, rows in self.history.rows.items():
-            if not rows:
-                continue
-            row = rows[-1]
-            state = candidate_state(row)
-            values = (badge, self.badge_devices.get(badge, ''), f'{self.history.rate(badge):.1f}',
-                      f'{self.history.counts[badge]:,}', self.history.gaps[badge],
-                      (row['late_samples'] - self.history.first_drops[badge]) & 0xFFFFFFFF, state, row['model_id'])
+        for badge in sorted(set(self.links) | set(self.history.rows)):
+            rows = self.history.rows.get(badge)
+            device, link = self.badge_devices.get(badge, ''), self.links.get(badge, '')
+            if rows:
+                row = rows[-1]
+                values = (badge, device, link, f'{self.history.rate(badge):.1f}',
+                          f'{self.history.counts[badge]:,}', self.history.gaps[badge],
+                          (row['late_samples'] - self.history.first_drops[badge]) & 0xFFFFFFFF,
+                          candidate_state(row), row['model_id'])
+            else:
+                values = (badge, device, link) + ('',) * 6
             if self.table.exists(badge):
                 self.table.item(badge, values=values)
             else:
@@ -388,7 +400,7 @@ class SpeakerViewer:
             # Tk's Windows DPI update can leave the backing figure larger than its viewport.
             self.figure.set_size_inches(widget.winfo_width() / self.figure.dpi,
                                         widget.winfo_height() / self.figure.dpi, forward=False)
-        colors = ['#2166ac', '#b35806', '#1b7837', '#762a83', '#b2182b', '#444444']
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22']
         visible = {badge: self.history.visible(badge, float(self.window.get())) for badge in self.history.rows}
         latest = max((datetime.fromisoformat(rows[-1]['Timestamp']).timestamp() for rows in visible.values() if rows), default=0)
         series = {badge: ([datetime.fromisoformat(row['Timestamp']).timestamp() - latest for row in rows], rows)
