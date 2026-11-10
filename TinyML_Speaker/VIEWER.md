@@ -51,9 +51,11 @@ preview batches; CSV recording happens before plot delivery. Sensor traces from 
 badges share their estimated UTC acquisition timeline, rather than aligning
 unrelated device uptimes.
 
-Speaking status is the local candidate of the latest received sample, which can
-be several seconds old when sending in bulk. It is an estimate, not a reference
-annotation. `paper-rule` means no trained hybrid model is active. The optional
+Above the table, a tile per badge shows its latest detection: green **Speaking**
+or grey **Quiet**, with how old that reading is. The reading can be several
+seconds old when sending in bulk; set **Send every** to 0 or 1 for a faster
+indicator at the cost of more frequent BLE transfers. It is the badge's local
+candidate, an estimate, not a reference annotation. `paper-rule` means no trained hybrid model is active. The optional
 model-score chart has no valid score while the firmware reports -1.
 
 ## Make independent observer labels
@@ -62,7 +64,10 @@ The observer panel sits beside the live plots, so raw sensor data stays visible
 while you annotate. The layout fits a normal window, so full screen is not required. Drag the divider to resize either side. While the panel is
 open, the paper speech score, local candidate, and hybrid model charts and table
 columns are hidden, so labels stay independent of the predictions they will be
-used to evaluate. Click **Finish annotations** to show them again.
+used to evaluate. Click **Finish annotations** to show them again. To see the detection tiles and
+prediction charts while labeling, tick **Show detections while labeling**. This
+can bias your labels toward what the badge reports, which weakens them as a check
+on that same badge, so leave it off for sessions you plan to use for evaluation.
 
 Start observing explicitly, then mark speaking, quiet (not speaking), or unknown for each
 wearer. Multiple speakers are supported. The keyboard shortcuts are the same as
@@ -82,6 +87,19 @@ file. Train from multiple independently labeled sessions using the existing
 
 ![Live plots beside the observer panel with synthetic badge identities](docs/screenshots/viewer-annotating.png)
 
+## Review past runs
+
+Click **Open past run** and pick a `*_raw.csv` file, either from a viewer session
+folder or from the command-line receiver. Drag the slider to move through the
+recording; **Visible seconds** sets the window width. If a `reference.csv` sits
+in the same folder and contains Speaking or Quiet labels, an **Observer label**
+chart appears and the side panel compares each badge's detections with those
+labels. That comparison uses no boundary margin, so it can differ slightly from
+`run.bat evaluate` on `training.csv`. Click **Back to live** or start a new
+recording to leave review.
+
+![Past run review on a single-badge bench recording](docs/screenshots/viewer-review.png)
+
 ## Validation and limits
 
 A single-board GUI check scanned, connected, drew all four default plots, and
@@ -91,7 +109,7 @@ gaps and zero new device drops. Stop/drain and a merge with no observed labels
 completed; all merged rows correctly remained unknown.
 
 Synthetic UI tests cover the demo, embedded observer lifecycle, prediction hiding during annotation, sub-second checkpoints,
-reference-save failure, empty connection-error reporting, and cross-badge plot
-alignment. This does not establish multi-board reliability, speaker accuracy,
+reference-save failure, empty connection-error reporting, cross-badge plot
+alignment, detection tiles, and past-run review with and without labels. This does not establish multi-board reliability, speaker accuracy,
 or independent human annotation quality. Matplotlib on the current Python 3.9
 environment emits third-party Pyparsing deprecation warnings; the checks pass.

@@ -11,16 +11,19 @@ import re
 import threading
 import time
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog, ttk
+from typing import Optional
 
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import pandas as pd
 
 from ground_truth import merge_annotations
 from observer import ObserverPanel
 from pipeline import ROOT, SERVICE, receive
+from review import Recording, percent, plot_columns
 
 PLOTS = [
     ('Sound_Level', 'Microphone power', 'power', True),
@@ -34,8 +37,11 @@ PLOTS = [
     ('Humidity', 'Humidity', '%', False),
     ('Pressure', 'Pressure', 'kPa', False),
     ('Proximity', 'Proximity', 'counts', False),
+    ('observer_label', 'Observer label (past runs)', 'quiet / speaking', True),
 ]
 PREDICTIONS = {'speech_score', 'candidate', 'model_score'}
+REVIEW_ONLY = {'observer_label'}
+TILE_COLORS = {'speaking': ('#1b7837', 'white'), 'not speaking': ('#e0e0e0', 'black')}
 COLUMNS = ('badge', 'device', 'link', 'rate', 'received', 'gaps', 'drops', 'candidate', 'model')
 
 
@@ -101,6 +107,10 @@ class SpeakerViewer:
         self.devices: list[str] = []
         self.badge_devices: dict[str, str] = {}
         self.links: dict[str, str] = {}
+        self.review: Optional[Recording] = None
+        self.review_end = tk.DoubleVar(value=0)
+        self.show_detections = tk.BooleanVar(value=False)
+        self.tile_labels: dict[str, tk.Label] = {}
         self.session = tk.StringVar(value='session_01')
         self.rate = tk.StringVar(value='200')
         self.send = tk.StringVar(value='5')
@@ -150,7 +160,9 @@ class SpeakerViewer:
         self.capture_button = ttk.Button(controls, text='Start recording', command=self.toggle_capture)
         self.capture_button.grid(row=2, column=1, sticky='w', padx=6, pady=4)
         self.folder_button = ttk.Button(controls, text='Open session folder', command=self.open_folder, state='disabled')
-        self.folder_button.grid(row=2, column=2, columnspan=2, sticky='w', padx=6)
+        self.folder_button.grid(row=2, column=2, sticky='w', padx=6)
+        self.review_button = ttk.Button(controls, text='Open past run', command=self.open_review)
+        self.review_button.grid(row=2, column=3, sticky='w', padx=6)
         status = ttk.Label(controls, textvariable=self.status)
         status.grid(row=3, column=1, columnspan=3, sticky='ew', padx=6)
         status.bind('<Configure>', lambda event: status.configure(wraplength=max(200, event.width)))
@@ -163,13 +175,15 @@ class SpeakerViewer:
         self.panes.add(self.reference_pane, weight=1)
         ttk.Label(self.reference_pane, text='Observer labels become available once the badges connect. '
                   'Prediction charts are hidden while the observer panel is open.', wraplength=360, padding=16).pack(anchor='w')
+        self.tiles = ttk.Frame(self.monitor_pane)
+        self.tiles.pack(fill='x', pady=(4, 0))
         self.table = ttk.Treeview(self.monitor_pane, columns=COLUMNS, show='headings', height=3)
         for name, label, width in zip(COLUMNS, ['Badge', 'Device', 'Link', 'Acquired Hz', 'Received', 'Seq gaps', 'New drops',
                                                 'Candidate', 'Model'], [70, 120, 90, 80, 75, 65, 75, 90, 100]):
             self.table.heading(name, text=label)
             self.table.column(name, width=width, minwidth=50, stretch=True)
         self.table.pack(fill='x', pady=(4, 4))
-        plot_controls = ttk.Frame(self.monitor_pane)
+        plot_controls = self.plot_controls = ttk.Frame(self.monitor_pane)
         plot_controls.pack(fill='x', pady=2)
         charts = ttk.Menubutton(plot_controls, text='Charts')
         charts.pack(side='left', padx=(0, 14))
@@ -183,7 +197,16 @@ class SpeakerViewer:
         ttk.Combobox(plot_controls, textvariable=self.window, values=['10', '20', '30', '60'], width=4, state='readonly').pack(side='left', padx=(5, 14))
         ttk.Label(plot_controls, text='Refresh (Hz)').pack(side='left')
         ttk.Combobox(plot_controls, textvariable=self.refresh, values=['1', '2', '5', '10'], width=4, state='readonly').pack(side='left', padx=5)
-        plot_area = ttk.Frame(self.monitor_pane, width=1, height=1)
+        self.detections_check = ttk.Checkbutton(plot_controls, text='Show detections while labeling (may bias labels)',
+                                                variable=self.show_detections, command=self.refresh_predictions)
+        self.detections_check.pack(side='left', padx=(14, 0))
+        self.review_bar = ttk.Frame(self.monitor_pane)
+        ttk.Button(self.review_bar, text='Back to live', command=self.exit_review).pack(side='right', padx=(8, 0))
+        self.review_position = ttk.Label(self.review_bar, width=22)
+        self.review_position.pack(side='right')
+        self.review_scale = ttk.Scale(self.review_bar, from_=0, to=1, variable=self.review_end, command=lambda _: self.draw())
+        self.review_scale.pack(side='left', fill='x', expand=True)
+        plot_area = self.plot_area = ttk.Frame(self.monitor_pane, width=1, height=1)
         plot_area.pack(fill='both', expand=True, pady=4)
         plot_area.pack_propagate(False)
         self.figure = Figure(figsize=(10, 5), dpi=100, constrained_layout=True)
@@ -202,15 +225,18 @@ class SpeakerViewer:
     def rebuild_plots(self) -> None:
         self.figure.clear()
         self.axes = {}
+        hidden = self.predictions_hidden()
         selected = [plot for plot in PLOTS if self.plot_vars[plot[0]].get()
-                    and not (self.annotating and plot[0] in PREDICTIONS)]
+                    and not (hidden and plot[0] in PREDICTIONS)
+                    and (plot[0] not in REVIEW_ONLY or (self.review and self.review.labeled))]
         columns = 1 if len(selected) <= 3 else 2
         for index, (field, title, unit, _) in enumerate(selected, 1):
             axis = self.figure.add_subplot(math.ceil(len(selected) / columns), columns, index)
             axis.set_title(title, loc='left', fontsize=10)
             axis.set_ylabel(unit, fontsize=9)
             if index > len(selected) - columns:
-                axis.set_xlabel('Acquisition time (seconds from latest)', fontsize=9)
+                axis.set_xlabel('Seconds from recording start' if self.review else 'Acquisition time (seconds from latest)',
+                                fontsize=9)
             axis.grid(True, alpha=.2)
             self.axes[field] = axis
         if not selected:
@@ -247,6 +273,8 @@ class SpeakerViewer:
                 self.observer.close()
             return
         selected = [self.devices[i] for i in self.device_list.curselection()]
+        if selected and self.review:
+            self.exit_review()
         if not selected:
             self.status.set('Scan and select at least one badge first.')
             return
@@ -287,16 +315,27 @@ class SpeakerViewer:
             widget.configure(state='disabled' if running else ('normal' if i == 0 else 'readonly'))
         self.device_list.configure(state='disabled' if running else 'normal')
         self.merge_button.configure(state='disabled' if running else 'normal')
+        self.review_button.configure(state='disabled' if running else 'normal')
 
     def set_annotating(self, active: bool) -> None:
-        # Keep observer labels independent of the predictions they will be used to evaluate.
         self.annotating = active
-        self.table.configure(displaycolumns=[c for c in COLUMNS if c not in ['candidate', 'model']] if active else '#all')
+        self.refresh_predictions()
+
+    def predictions_hidden(self) -> bool:
+        # Keep observer labels independent of the predictions they will be used to evaluate.
+        return self.annotating and not self.show_detections.get() and not self.review
+
+    def refresh_predictions(self) -> None:
+        hidden = self.predictions_hidden()
+        self.table.configure(displaycolumns=[c for c in COLUMNS if c not in ['candidate', 'model']] if hidden else '#all')
         for index, (field, *_) in enumerate(PLOTS):
             if field in PREDICTIONS:
-                self.chart_menu.entryconfigure(index, state='disabled' if active else 'normal')
+                self.chart_menu.entryconfigure(index, state='disabled' if hidden else 'normal')
+            elif field in REVIEW_ONLY:
+                self.chart_menu.entryconfigure(index, state='normal' if self.review else 'disabled')
         self.rebuild_plots()
         self.draw()
+        self.update_tiles()
 
     def create_observer(self, badges: list[str]) -> None:
         for child in self.reference_pane.winfo_children():
@@ -354,6 +393,12 @@ class SpeakerViewer:
                 self.links[data['badge']] = data['state']
             elif kind == 'finished':
                 self.saved.set(f'Saved {data["samples"]:,} samples to {Path(data["raw_path"]).name}')
+            elif kind == 'review_loaded':
+                self.review_button.configure(state='normal')
+                if data.get('error'):
+                    self.status.set(f'Could not open past run: {data["error"]}')
+                elif not self.running:
+                    self.show_review(data['recording'])
             elif kind == 'merge_result':
                 self.status.set(data['message'])
                 self.merge_button.configure(state='normal')
@@ -382,6 +427,29 @@ class SpeakerViewer:
             self.last_draw = time.monotonic()
         self.poll_timer = self.root.after(50, self.poll)
 
+    def update_tiles(self) -> None:
+        show = bool(self.history.rows) and not self.review and not self.predictions_hidden()
+        if not show:
+            self.tiles.pack_forget()
+            return
+        if not self.tiles.winfo_manager():
+            self.tiles.pack(fill='x', pady=(4, 0), before=self.table)
+        now = time.time()
+        for badge in sorted(self.history.rows):
+            rows = self.history.rows[badge]
+            if not rows:
+                continue
+            row = rows[-1]
+            state = candidate_state(row)
+            age = max(0.0, now - datetime.fromisoformat(row['Timestamp']).timestamp())
+            background, foreground = TILE_COLORS.get(state, ('white', '#555555'))
+            tile = self.tile_labels.get(badge)
+            if tile is None or not tile.winfo_exists():
+                tile = self.tile_labels[badge] = tk.Label(self.tiles, font=('Segoe UI', 10, 'bold'), padx=10, pady=4)
+                tile.pack(side='left', padx=(0, 6))
+            text = f'{badge}  {"Speaking" if state == "speaking" else "Quiet" if state == "not speaking" else state}'
+            tile.configure(text=f'{text}  ({age:.0f} s ago)' if age < 3600 else text, bg=background, fg=foreground)
+
     def update_table(self) -> None:
         for badge in sorted(set(self.links) | set(self.history.rows)):
             rows = self.history.rows.get(badge)
@@ -398,6 +466,7 @@ class SpeakerViewer:
                 self.table.item(badge, values=values)
             else:
                 self.table.insert('', 'end', iid=badge, values=values)
+        self.update_tiles()
 
     def draw(self) -> None:
         widget = self.canvas.get_tk_widget()
@@ -406,36 +475,114 @@ class SpeakerViewer:
             self.figure.set_size_inches(widget.winfo_width() / self.figure.dpi,
                                         widget.winfo_height() / self.figure.dpi, forward=False)
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22']
-        visible = {badge: self.history.visible(badge, float(self.window.get())) for badge in self.history.rows}
-        latest = max((datetime.fromisoformat(rows[-1]['Timestamp']).timestamp() for rows in visible.values() if rows), default=0)
-        series = {badge: ([datetime.fromisoformat(row['Timestamp']).timestamp() - latest for row in rows], rows)
-                  for badge, rows in visible.items() if rows}
+        seconds = float(self.window.get())
+        series: dict[str, tuple] = {}
+        if self.review:
+            end = max(min(self.review_end.get(), self.review.duration), 0)
+            self.review_position.configure(text=f'{end:.1f} s of {self.review.duration:.1f} s')
+            for badge in self.review.badges:
+                part = self.review.window(badge, end, seconds)
+                if len(part):
+                    series[badge] = (part['t'].to_numpy(), part)
+            limits = (end - seconds, end)
+        else:
+            frames = {badge: pd.DataFrame(rows) for badge in self.history.rows
+                      if (rows := self.history.visible(badge, seconds))}
+            times = {badge: pd.to_datetime(frame['Timestamp'], utc=True, format='ISO8601') for badge, frame in frames.items()}
+            latest = max((value.iloc[-1] for value in times.values()), default=None)
+            series = {badge: ((times[badge] - latest).dt.total_seconds().to_numpy(), plot_columns(frame))
+                      for badge, frame in frames.items()}
+            limits = (-seconds, 0)
         for field, axis in self.axes.items():
             for line in list(axis.lines):
                 line.remove()
             for text in list(axis.texts):
                 text.remove()
-            has_model_score = False
-            for i, (badge, (x, rows)) in enumerate(series.items()):
-                y = [row.get(field, math.nan) for row in rows]
-                if field == 'model_score':
-                    y = [value if value >= 0 else math.nan for value in y]
-                    has_model_score = has_model_score or any(math.isfinite(value) for value in y)
-                elif field == 'candidate':
-                    y = [value if candidate_state(row) not in ['warming up', 'unavailable'] else math.nan
-                         for row, value in zip(rows, y)]
+            has_values = False
+            for i, (badge, (x, frame)) in enumerate(series.items()):
+                y = frame[field].astype(float).to_numpy() if field in frame else [math.nan] * len(x)
+                has_values = has_values or bool(pd.notna(y).any())
                 axis.plot(x, y, color=colors[i % len(colors)], label=badge, linewidth=1.2,
-                          drawstyle='steps-post' if field == 'candidate' else 'default')
-            axis.set_xlim(-float(self.window.get()), 0)
+                          drawstyle='steps-post' if field in ['candidate', 'observer_label'] else 'default')
+            axis.set_xlim(*limits)
             axis.relim()
             axis.autoscale_view(scalex=False)
-            if field in ['candidate', 'model_score']:
+            if field in ['candidate', 'model_score', 'observer_label']:
                 axis.set_ylim(-.1, 1.1)
             if axis.lines and field == next(iter(self.axes)):
                 axis.legend(loc='upper right', fontsize=8)
-            if field == 'model_score' and not has_model_score:
+            if field == 'model_score' and not has_values:
                 axis.text(.5, .5, 'No hybrid model prediction available', transform=axis.transAxes, ha='center', fontsize=9)
+            if field == 'observer_label' and not has_values:
+                axis.text(.5, .5, 'No observer labels in this window', transform=axis.transAxes, ha='center', fontsize=9)
         self.canvas.draw_idle()
+
+    def open_review(self) -> None:
+        if self.running:
+            return
+        initial = self.output_root if self.output_root.exists() else ROOT
+        name = filedialog.askopenfilename(parent=self.root, title='Open a recorded run', initialdir=str(initial),
+                                          filetypes=[('Badge recordings', '*_raw.csv'), ('CSV files', '*.csv')])
+        if not name:
+            return
+        self.review_button.configure(state='disabled')
+        self.status.set(f'Loading {Path(name).name}...')
+        def work() -> None:
+            try:
+                self.emit('review_loaded', {'recording': Recording(Path(name))})
+            except (OSError, ValueError, KeyError) as error:
+                self.emit('review_loaded', {'error': f'{type(error).__name__}: {error}'})
+        threading.Thread(target=work, daemon=True).start()
+
+    def show_review(self, recording: Recording) -> None:
+        if self.observer and not self.observer.closed:
+            self.observer.close()
+        self.review = recording
+        self.history = PlotHistory()
+        self.links = {}
+        self.table.delete(*self.table.get_children())
+        for child in self.reference_pane.winfo_children():
+            child.destroy()
+        panel = ttk.Frame(self.reference_pane, padding=12)
+        panel.pack(fill='both', expand=True)
+        ttk.Label(panel, text='Past run', font=('Segoe UI', 13, 'bold')).pack(anchor='w')
+        details = (f'{recording.path.name}\nRecording ID: {", ".join(recording.recording_ids)}\n'
+                   f'{recording.duration:.1f} s, {recording.rows:,} samples, {len(recording.badges)} badge(s)\n{recording.note}')
+        ttk.Label(panel, text=details, wraplength=360).pack(anchor='w', pady=(4, 8))
+        columns = ('badge', 'detected', 'labeled', 'agreement')
+        table = ttk.Treeview(panel, columns=columns, show='headings', height=min(9, len(recording.badges)))
+        for name, label, width in zip(columns, ['Badge', 'Detected speaking', 'Labeled speaking', 'Agreement'],
+                                      [80, 110, 110, 80]):
+            table.heading(name, text=label)
+            table.column(name, width=width, minwidth=50, stretch=True)
+        for row in recording.summary():
+            table.insert('', 'end', values=(row['badge'], percent(row['detected']), percent(row['labeled']),
+                                            percent(row['agreement'])))
+        table.pack(fill='x')
+        ttk.Label(panel, wraplength=360, padding=(0, 8), text='Detected and labeled speaking are shares of time. '
+                  'Agreement compares the badge candidate with observer labels on labeled, warmed-up samples; '
+                  'nearby samples are not independent.').pack(anchor='w')
+        self.review_scale.configure(to=max(recording.duration, .001))
+        self.review_end.set(min(recording.duration, float(self.window.get())))
+        self.table.pack_forget()
+        self.review_bar.pack(fill='x', pady=(0, 2), before=self.plot_area)
+        self.saved.set(f'Reviewing {recording.path.name}. Drag the slider to move through the run.')
+        self.status.set('Viewing a past run. Start recording or click Back to live to return.')
+        self.refresh_predictions()
+
+    def exit_review(self) -> None:
+        if not self.review:
+            return
+        self.review = None
+        self.review_bar.pack_forget()
+        self.table.pack(fill='x', pady=(4, 4), before=self.plot_controls)
+        for child in self.reference_pane.winfo_children():
+            child.destroy()
+        ttk.Label(self.reference_pane, text='Observer labels become available once the badges connect.',
+                  wraplength=360, padding=16).pack(anchor='w')
+        self.saved.set('Every received sample is saved. Plotting uses a bounded, thinned history.')
+        self.status.set('Scan for badges, select devices, then start a recording.')
+        self.refresh_predictions()
 
     def open_folder(self) -> None:
         if self.session_dir and self.session_dir.exists():
