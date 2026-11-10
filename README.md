@@ -23,8 +23,9 @@ The repository contains two implementations of the speaker detector:
 | Where speaker scoring runs | On the PC, after recording | On each badge, as samples arrive |
 | Sampling | About 16 Hz nominal, host receipt timestamps | 200 Hz default (10, 50, 100, or 200 Hz), device clock mapped to UTC |
 | Rolling baseline | 60 s; may use whole-recording quartiles at startup | 60 s, past samples only |
-| Cross-badge decision | Top eligible score per 500 ms bin, centered 5-bin vote | Same rule, applied on the PC |
-| Run post-processing | Drops runs under 2 s, merges gaps under 1.5 s, fills gaps under 0.5 s | Not applied |
+| Loudness floor | None | Sound must be at least 8x the rolling quiet level |
+| Cross-badge decision | Top eligible score per 500 ms bin, centered 5-bin vote | Same, but a badge needs half its samples flagged in a bin; applied on the PC |
+| Run post-processing | Drops runs under 2 s, merges gaps under 1.5 s, fills gaps under 0.5 s | Drops runs under 1 s |
 | Ground truth | Manual active labels; unlabeled time is not verified | Observer panel with Speaking, Quiet, and explicit Unknown, saved every 0.2 s |
 | Learned model | None on the badge; WEKA classifies whole meetings | Optional decision tree, exported to C++ and flashed to the badge |
 | Badge identity | MAC address allowlist in the collector | Name flashed at upload with `-Name` |
@@ -87,9 +88,11 @@ reproducibility checks.
 
 ![TinyML detection pipeline](TinyML_Speaker/docs/figures/detection-pipeline.png)
 
-The badge computes the paper's score causally and lights its LED when it thinks
-its wearer is speaking. The PC receives every badge in parallel and applies the
-same 500 ms selection and 5-bin vote. While a recording runs, an observer marks
+The badge computes the paper's score causally, adds a loudness floor so a quiet
+room is not flagged, and lights its LED after about 1 s of local speech. The PC
+receives every badge in parallel, keeps only bins where at least half of a
+badge's samples are flagged for at least 1 s, and applies the paper's 500 ms
+selection and 5-bin vote. While a recording runs, an observer marks
 each badge as Speaking, Quiet, or Unknown, and the viewer hides detections so they
 cannot bias the labels. Finished runs can be reopened to compare detections with
 the observer's labels.

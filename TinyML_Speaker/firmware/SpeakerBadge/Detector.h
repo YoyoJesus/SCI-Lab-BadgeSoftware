@@ -2,6 +2,9 @@
 #include <math.h>
 #include <stdlib.h>
 
+// Speech must be this many times the rolling quiet level (sound Q25).
+constexpr float LOUDNESS_FLOOR = 8.0f;
+
 struct Detection {
   float sound = 0, accel = 0, margin = 0, score = 0;
   bool ready = false, candidate = false;
@@ -45,7 +48,8 @@ class PaperDetector {
     result.accel = (accel - accelFloor) / accelSpread;
     result.margin = (shortMean - presenceThreshold) / soundSpread;
     result.score = result.sound + 1.2f * fminf(fmaxf(result.accel, 0), 2.5f);
-    result.candidate = result.score >= .75f && (result.margin > 0 || result.score >= 3.5f);
+    bool loud = sound >= LOUDNESS_FLOOR * fmaxf(soundFloor, 1.0f);
+    result.candidate = loud && result.score >= .75f && (result.margin > 0 || result.score >= 3.5f);
     result.ready = true;
     return result;
   }

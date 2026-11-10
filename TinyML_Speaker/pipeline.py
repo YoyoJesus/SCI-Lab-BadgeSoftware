@@ -23,6 +23,9 @@ CHARACTERISTIC = 'e8310002-65d2-4b11-91e0-87f64f931c82'
 CONNECT_ATTEMPTS = 3
 DEFAULT_BADGE_NAME = 'SCI Speaker v2'
 RETRY_SECONDS = 2.0
+LOUDNESS_FLOOR = 8.0
+SPEAKING_FRACTION = .5
+MIN_SPEAKING_BINS = 2
 FEATURES = ['norm_sound', 'norm_accel', 'presence_margin', 'Gyro_Magnitude',
             'Mag_Magnitude', 'Temperature', 'Humidity', 'Pressure', 'Proximity']
 FIELDS = ['seq', 'device_ms', 'Sound_Level', 'Acceleration', 'norm_sound',
@@ -55,7 +58,8 @@ class Detector:
         score = ns + 1.2 * np.clip(na, 0, 2.5)
         return {'norm_sound': float(ns), 'norm_accel': float(na),
                 'presence_margin': float(margin), 'score': float(score),
-                'candidate': bool(score >= .75 and (margin > 0 or score >= 3.5))}
+                'candidate': bool(sound >= LOUDNESS_FLOOR * max(s25, 1) and score >= .75
+                                  and (margin > 0 or score >= 3.5))}
 
 
 def vote_winner(winners: list[Optional[str]]) -> Optional[str]:
@@ -187,16 +191,26 @@ def train(args: argparse.Namespace) -> None:
 
 
 def label_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    """Apply the paper's winner and centered vote to a complete table."""
+    """Pick a speaker per 500 ms bin, then apply the paper's centered vote.
+
+    A badge is speaking in a bin when at least half its samples are flagged, and only in
+    runs of at least MIN_SPEAKING_BINS bins. The speaking badge with the highest flagged
+    score wins the bin.
+    """
     import pandas as pd
     frame = frame.copy()
     frame['Timestamp'] = pd.to_datetime(frame['Timestamp'], utc=True, format='ISO8601')
     frame['time_bin'] = frame['Timestamp'].dt.floor('500ms')
-    eligible = frame[frame['candidate'].isin([1, True])]
-    winners = {}
-    for tick, group in eligible.groupby('time_bin', sort=True):
-        winners[tick] = group.loc[group['speech_score'].idxmax(), 'Badge_Name']
+    flagged = frame['candidate'].isin([1, True])
+    per_bin = frame.assign(flagged=flagged, score=frame['speech_score'].where(flagged)).groupby(
+        ['Badge_Name', 'time_bin']).agg(flagged=('flagged', 'mean'), score=('score', 'max'))
     bins = sorted(frame['time_bin'].unique())
+    speaking = (per_bin['flagged'] >= SPEAKING_FRACTION).unstack(0, fill_value=False).reindex(bins, fill_value=False)
+    runs = (speaking != speaking.shift()).cumsum()
+    lengths = speaking.apply(lambda column: column.groupby(runs[column.name]).transform('size'))
+    speaking &= lengths >= MIN_SPEAKING_BINS
+    scores = per_bin['score'].unstack(0).reindex(bins).where(speaking)
+    winners = {tick: row.idxmax() for tick, row in scores.iterrows() if row.notna().any()}
     smoothed = {tick: vote_winner([winners.get(t) for t in bins[max(0, i - 2):i + 3]])
                 for i, tick in enumerate(bins)}
     frame['auto_speaker'] = frame['time_bin'].map(smoothed).fillna('no_speaker')

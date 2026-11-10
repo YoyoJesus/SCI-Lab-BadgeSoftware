@@ -86,11 +86,34 @@ def test_warmup_constant_baseline_and_paper_thresholds():
     for _ in range(9):
         assert detector.update(10, 0) is None
     assert detector.update(10, 0)['candidate'] is False
-    row = detector.update(20, 0)
-    assert row['norm_sound'] == 10
+    row = detector.update(100, 0)
+    assert row['norm_sound'] == 90
     assert row['candidate'] is True
     row = detector.update(10, 10)
     assert row['score'] == pytest.approx(3)
+
+
+def test_relative_bump_below_loudness_floor_is_not_speech():
+    detector = Detector()
+    for _ in range(20):
+        detector.update(100, 0)
+    row = detector.update(400, 0)
+    assert row['score'] >= 3.5 and row['candidate'] is False
+    assert detector.update(900, 0)['candidate'] is True
+
+
+def test_label_frame_needs_half_of_each_bin_and_one_second_runs():
+    import pandas as pd
+    from pipeline import label_frame
+    rows = []
+    for tick in range(10):
+        for sample in range(4):
+            stamp = f'2026-01-01T00:00:{tick // 2:02d}.{5 * (tick % 2)}{sample}+00:00'
+            # 'a' flags one sample in every bin; 'b' flags whole bins, but never two in a row.
+            rows.append(dict(Timestamp=stamp, Badge_Name='a', speech_score=5, candidate=sample == 0))
+            rows.append(dict(Timestamp=stamp, Badge_Name='b', speech_score=5, candidate=tick % 2 == 0))
+    result = label_frame(pd.DataFrame(rows))
+    assert set(result['auto_speaker']) == {'no_speaker'}
 
 
 def test_invalid_readings_reset_history():

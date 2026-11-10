@@ -32,10 +32,11 @@
 <rect x="525" y="380" width="130" height="56" rx="5" fill="#f5c18f" stroke="#2b2b2b" stroke-width="2.2"/>
 <text x="590.0" y="404.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Weight</text>
 <text x="590.0" y="420.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">1.2 · clip(n<tspan dy="3" font-size="0.75em">a</tspan><tspan dy="-3">, 0, 2.5)</tspan></text>
-<rect x="640" y="150" width="118" height="64" rx="5" fill="#cdeeb2" stroke="#2b2b2b" stroke-width="2.2"/>
-<text x="699.0" y="170.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Speaking?</text>
-<text x="699.0" y="186.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">s ≥ 0.75 and</text>
-<text x="699.0" y="202.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">(m &gt; 0 or s ≥ 3.5)</text>
+<rect x="640" y="146" width="118" height="84" rx="5" fill="#cdeeb2" stroke="#2b2b2b" stroke-width="2.2"/>
+<text x="699.0" y="168.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Speaking?</text>
+<text x="699.0" y="184.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">s ≥ 0.75 and</text>
+<text x="699.0" y="200.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">(m &gt; 0 or s ≥ 3.5)</text>
+<text x="699.0" y="216.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">and sound ≥ 8 · Q<tspan dy="3" font-size="0.75em">25</tspan><tspan dy="-3"></tspan></text>
 <rect x="640" y="450" width="118" height="56" rx="5" fill="#a6aef0" stroke="#2b2b2b" stroke-width="2.2" stroke-dasharray="6 4"/>
 <text x="699.0" y="474.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Decision tree</text>
 <text x="699.0" y="490.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">optional, p ≥ 0.6</text>
@@ -51,24 +52,25 @@
 <path d="M485,178 L574,178" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
 <path d="M590,380 L590,194" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
 <path d="M495,293 L690,293" stroke="#eceef8" stroke-width="8"/>
-<path d="M495,293 L690,293 L690,216" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M495,293 L690,293 L690,232" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
 <rect x="599.2" y="276" width="85.6" height="17" fill="#eceef8"/>
 <text x="642" y="288" font-size="11.5" font-weight="bold" fill="#5f6b7a" text-anchor="middle" font-style="normal">m (presence)</text>
 <circle cx="590" cy="178" r="14" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/><path d="M581,178 L599,178 M590,169 L590,187" stroke="#2b2b2b" stroke-width="2"/>
 <path d="M604,178 L638,178" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
 <text x="620" y="170" font-size="14" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="italic">s</text>
-<path d="M730,450 L730,216" fill="none" stroke="#5b63c9" stroke-width="2" marker-end="url(#h5b63c9)"/>
-<path d="M700,150 L700,130" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
+<path d="M730,450 L730,232" fill="none" stroke="#5b63c9" stroke-width="2" marker-end="url(#h5b63c9)"/>
+<path d="M700,146 L700,130" fill="none" stroke="#2b2b2b" stroke-width="2" marker-end="url(#h2b2b2b)"/>
 <circle cx="700" cy="119" r="10" fill="#ffd54a" stroke="#2b2b2b" stroke-width="2"/>
-<text x="717" y="124" font-size="12" font-weight="bold" fill="#2b2b2b" text-anchor="start" font-style="normal">LED</text>
+<text x="684" y="124" font-size="12" font-weight="bold" fill="#2b2b2b" text-anchor="end" font-style="normal">LED, 1 s hold</text>
 <text x="400" y="535" font-size="12" font-weight="normal" fill="#5f6b7a" text-anchor="middle" font-style="italic">Uses only past samples. Raw audio never leaves the badge.</text>
 <rect x="920" y="80" width="290" height="470" rx="8" fill="#f5ece2" stroke="#2b2b2b" stroke-width="2.2"/>
 <rect x="995" y="150" width="140" height="56" rx="5" fill="#c3d9f5" stroke="#2b2b2b" stroke-width="2.2"/>
 <text x="1065.0" y="174.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Receiver</text>
 <text x="1065.0" y="190.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">clock anchor → UTC</text>
 <rect x="995" y="255" width="140" height="56" rx="5" fill="#f5c18f" stroke="#2b2b2b" stroke-width="2.2"/>
-<text x="1065.0" y="279.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Pick top s</text>
-<text x="1065.0" y="295.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">per 500 ms bin</text>
+<text x="1065.0" y="271.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Speaking bins</text>
+<text x="1065.0" y="287.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">≥ half flagged, ≥ 1 s</text>
+<text x="1065.0" y="303.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">top s wins the bin</text>
 <rect x="995" y="360" width="140" height="56" rx="5" fill="#f6e7a1" stroke="#2b2b2b" stroke-width="2.2"/>
 <text x="1065.0" y="384.0" font-size="13.5" font-weight="bold" fill="#2b2b2b" text-anchor="middle" font-style="normal">Vote</text>
 <text x="1065.0" y="400.0" font-size="11.5" font-weight="normal" fill="#2b2b2b" text-anchor="middle" font-style="normal">≥ 3 of 5 bins</text>
