@@ -1,5 +1,9 @@
 # Paper-based on-badge detection
 
+![Detection pipeline](docs/figures/detection-pipeline.svg)
+
+Figure sources: `docs/figures/detection-pipeline.svg` (vector), with `.pdf` and `.png` exports for papers.
+
 Source: ../paper/manuscript.md section 3.2 and
 ../Data Cleanup and Normalization/auto_label.py. Preserve the 1 s sound mean,
 60 s baseline, 0.45 presence quantile, quartile normalization with denominator
