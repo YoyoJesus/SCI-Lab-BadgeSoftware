@@ -51,23 +51,18 @@ preview batches; CSV recording happens before plot delivery. Sensor traces from 
 badges share their estimated UTC acquisition timeline, rather than aligning
 unrelated device uptimes.
 
-Above the table, a tile per badge shows its latest detection: green **Speaking**
-or grey **Quiet**, with how old that reading is. The reading can be several
-seconds old when sending in bulk; set **Send every** to 0 or 1 for a faster
-indicator at the cost of more frequent BLE transfers. It is the badge's local
-candidate, an estimate, not a reference annotation. `paper-rule` means no trained hybrid model is active. The optional
+While a recording runs, the speech score, local candidate, and hybrid model
+charts and table columns are hidden, so neither the observer nor anyone glancing
+at the screen sees what the badges detect. They appear once you stop, and in
+past-run review. The candidate is the badge's estimate, not a reference annotation. `paper-rule` means no trained hybrid model is active. The optional
 model-score chart has no valid score while the firmware reports -1.
 
 ## Make independent observer labels
 
 The observer panel sits beside the live plots, so raw sensor data stays visible
 while you annotate. The layout fits a normal window, so full screen is not required. Drag the divider to resize either side. While the panel is
-open, the paper speech score, local candidate, and hybrid model charts and table
-columns are hidden, so labels stay independent of the predictions they will be
-used to evaluate. Click **Finish annotations** to show them again. To see the detection tiles and
-prediction charts while labeling, tick **Show detections while labeling**. This
-can bias your labels toward what the badge reports, which weakens them as a check
-on that same badge, so leave it off for sessions you plan to use for evaluation.
+open, the prediction charts and columns stay hidden, so labels stay independent
+of the predictions they will be used to evaluate.
 
 Start observing explicitly, then mark speaking, quiet (not speaking), or unknown for each
 wearer. Multiple speakers are supported. The keyboard shortcuts are the same as
@@ -110,6 +105,6 @@ completed; all merged rows correctly remained unknown.
 
 Synthetic UI tests cover the demo, embedded observer lifecycle, prediction hiding during annotation, sub-second checkpoints,
 reference-save failure, empty connection-error reporting, cross-badge plot
-alignment, detection tiles, and past-run review with and without labels. This does not establish multi-board reliability, speaker accuracy,
+alignment, prediction hiding during recording, and past-run review with and without labels. This does not establish multi-board reliability, speaker accuracy,
 or independent human annotation quality. Matplotlib on the current Python 3.9
 environment emits third-party Pyparsing deprecation warnings; the checks pass.

@@ -41,7 +41,6 @@ PLOTS = [
 ]
 PREDICTIONS = {'speech_score', 'candidate', 'model_score'}
 REVIEW_ONLY = {'observer_label'}
-TILE_COLORS = {'speaking': ('#1b7837', 'white'), 'not speaking': ('#e0e0e0', 'black')}
 COLUMNS = ('badge', 'device', 'link', 'rate', 'received', 'gaps', 'drops', 'candidate', 'model')
 
 
@@ -109,8 +108,6 @@ class SpeakerViewer:
         self.links: dict[str, str] = {}
         self.review: Optional[Recording] = None
         self.review_end = tk.DoubleVar(value=0)
-        self.show_detections = tk.BooleanVar(value=False)
-        self.tile_labels: dict[str, tk.Label] = {}
         self.session = tk.StringVar(value='session_01')
         self.rate = tk.StringVar(value='200')
         self.send = tk.StringVar(value='5')
@@ -175,8 +172,6 @@ class SpeakerViewer:
         self.panes.add(self.reference_pane, weight=1)
         ttk.Label(self.reference_pane, text='Observer labels become available once the badges connect. '
                   'Prediction charts are hidden while the observer panel is open.', wraplength=360, padding=16).pack(anchor='w')
-        self.tiles = ttk.Frame(self.monitor_pane)
-        self.tiles.pack(fill='x', pady=(4, 0))
         self.table = ttk.Treeview(self.monitor_pane, columns=COLUMNS, show='headings', height=3)
         for name, label, width in zip(COLUMNS, ['Badge', 'Device', 'Link', 'Acquired Hz', 'Received', 'Seq gaps', 'New drops',
                                                 'Candidate', 'Model'], [70, 120, 90, 80, 75, 65, 75, 90, 100]):
@@ -197,9 +192,6 @@ class SpeakerViewer:
         ttk.Combobox(plot_controls, textvariable=self.window, values=['10', '20', '30', '60'], width=4, state='readonly').pack(side='left', padx=(5, 14))
         ttk.Label(plot_controls, text='Refresh (Hz)').pack(side='left')
         ttk.Combobox(plot_controls, textvariable=self.refresh, values=['1', '2', '5', '10'], width=4, state='readonly').pack(side='left', padx=5)
-        self.detections_check = ttk.Checkbutton(plot_controls, text='Show detections while labeling (may bias labels)',
-                                                variable=self.show_detections, command=self.refresh_predictions)
-        self.detections_check.pack(side='left', padx=(14, 0))
         self.review_bar = ttk.Frame(self.monitor_pane)
         ttk.Button(self.review_bar, text='Back to live', command=self.exit_review).pack(side='right', padx=(8, 0))
         self.review_position = ttk.Label(self.review_bar, width=22)
@@ -317,14 +309,15 @@ class SpeakerViewer:
         self.device_list.configure(state='disabled' if running else 'normal')
         self.merge_button.configure(state='disabled' if running else 'normal')
         self.review_button.configure(state='disabled' if running else 'normal')
+        self.refresh_predictions()
 
     def set_annotating(self, active: bool) -> None:
         self.annotating = active
         self.refresh_predictions()
 
     def predictions_hidden(self) -> bool:
-        # Keep observer labels independent of the predictions they will be used to evaluate.
-        return self.annotating and not self.show_detections.get() and not self.review
+        # Keep recordings and observer labels independent of the predictions they will be used to evaluate.
+        return (self.running or self.annotating) and not self.review
 
     def refresh_predictions(self) -> None:
         hidden = self.predictions_hidden()
@@ -336,7 +329,6 @@ class SpeakerViewer:
                 self.chart_menu.entryconfigure(index, state='normal' if self.review else 'disabled')
         self.rebuild_plots()
         self.draw()
-        self.update_tiles()
 
     def create_observer(self, badges: list[str]) -> None:
         for child in self.reference_pane.winfo_children():
@@ -428,29 +420,6 @@ class SpeakerViewer:
             self.last_draw = time.monotonic()
         self.poll_timer = self.root.after(50, self.poll)
 
-    def update_tiles(self) -> None:
-        show = bool(self.history.rows) and not self.review and not self.predictions_hidden()
-        if not show:
-            self.tiles.pack_forget()
-            return
-        if not self.tiles.winfo_manager():
-            self.tiles.pack(fill='x', pady=(4, 0), before=self.table)
-        now = time.time()
-        for badge in sorted(self.history.rows):
-            rows = self.history.rows[badge]
-            if not rows:
-                continue
-            row = rows[-1]
-            state = candidate_state(row)
-            age = max(0.0, now - datetime.fromisoformat(row['Timestamp']).timestamp())
-            background, foreground = TILE_COLORS.get(state, ('white', '#555555'))
-            tile = self.tile_labels.get(badge)
-            if tile is None or not tile.winfo_exists():
-                tile = self.tile_labels[badge] = tk.Label(self.tiles, font=('Segoe UI', 10, 'bold'), padx=10, pady=4)
-                tile.pack(side='left', padx=(0, 6))
-            text = f'{badge}  {"Speaking" if state == "speaking" else "Quiet" if state == "not speaking" else state}'
-            tile.configure(text=f'{text}  ({age:.0f} s ago)' if age < 3600 else text, bg=background, fg=foreground)
-
     def update_table(self) -> None:
         for badge in sorted(set(self.links) | set(self.history.rows)):
             rows = self.history.rows.get(badge)
@@ -467,7 +436,6 @@ class SpeakerViewer:
                 self.table.item(badge, values=values)
             else:
                 self.table.insert('', 'end', iid=badge, values=values)
-        self.update_tiles()
 
     def draw(self) -> None:
         widget = self.canvas.get_tk_widget()

@@ -64,28 +64,20 @@ def test_viewer_reviews_past_run_and_returns_to_live(tmp_path, tk_window):
         app.close()
 
 
-def test_detection_tiles_stay_hidden_while_labeling_unless_enabled(tmp_path, tk_window):
+def test_detections_stay_hidden_for_the_whole_recording(tmp_path, tk_window):
     from viewer import SpeakerViewer
     root = tk_window
     app = SpeakerViewer(root, demo=True, output_root=tmp_path)
     try:
-        root.update()
-        assert not app.tiles.winfo_manager()
-        app.show_detections.set(True)
-        app.refresh_predictions()
-        root.update()
-        assert app.tiles.winfo_manager() == 'pack'
-        assert 'candidate' in app.axes
-        texts = {badge: label.cget('text') for badge, label in app.tile_labels.items()}
-        assert set(texts) == {'badge_01', 'badge_02', 'badge_03'}
-        assert all('Speaking' in text or 'Quiet' in text for text in texts.values())
-        app.show_detections.set(False)
-        app.refresh_predictions()
-        root.update()
-        assert not app.tiles.winfo_manager()
         app.observer.close()
-        root.update()
-        assert app.tiles.winfo_manager() == 'pack'
+        assert {'speech_score', 'candidate'} <= set(app.axes)
+        app.running = True
+        app.set_capture_controls(True)
+        assert not {'speech_score', 'candidate', 'model_score'} & set(app.axes)
+        assert 'candidate' not in app.table['displaycolumns']
+        app.running = False
+        app.set_capture_controls(False)
+        assert {'speech_score', 'candidate'} <= set(app.axes)
     finally:
         app.close()
 
