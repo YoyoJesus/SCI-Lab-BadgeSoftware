@@ -38,7 +38,7 @@ validate sensor performance. The screenshots below use this mode.
    connected. A badge that fails three connection attempts is skipped and named
    in the status line; the rest keep recording. A badge that drops reconnects on
    its own. Mark it Unknown in the observer panel while it is reconnecting.
-4. Select sensor charts and adjust plot refresh or visible history as needed.
+4. Pick sensor charts from the **Charts** menu and adjust plot refresh or visible history as needed.
    Those controls affect drawing, not acquisition or CSV recording.
 5. Click **Stop and save** to stop the badge, drain its buffer, and disconnect.
    Closing during a capture requests this same drain before the window exits.
@@ -59,12 +59,12 @@ model-score chart has no valid score while the firmware reports -1.
 ## Make independent observer labels
 
 The observer panel sits beside the live plots, so raw sensor data stays visible
-while you annotate. Drag the divider to resize either side. While the panel is
+while you annotate. The layout fits a normal window, so full screen is not required. Drag the divider to resize either side. While the panel is
 open, the paper speech score, local candidate, and hybrid model charts and table
 columns are hidden, so labels stay independent of the predictions they will be
 used to evaluate. Click **Finish annotations** to show them again.
 
-Start observing explicitly, then mark speaking, not speaking, or unknown for each
+Start observing explicitly, then mark speaking, quiet (not speaking), or unknown for each
 wearer. Multiple speakers are supported. The keyboard shortcuts are the same as
 the standalone panel: 1–9 toggle speakers, 0 marks observed silence, and Space
 pauses. Leaving the window pauses annotation and keeps that time unknown.

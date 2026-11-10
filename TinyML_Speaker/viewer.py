@@ -109,9 +109,10 @@ class SpeakerViewer:
         self.status = tk.StringVar(value='Demo data only. No badge is connected.' if demo else 'Scan for badges, select devices, then start a recording.')
         self.saved = tk.StringVar(value='Every received sample is saved. Plotting uses a bounded, thinned history.')
         root.title('Speaker badge lab' + (' | DEMO DATA' if demo else ''))
-        root.geometry('1480x900')
-        root.minsize(1200, 740)
-        root.state('zoomed')
+        width = min(1400, int(root.winfo_screenwidth() * .9))
+        height = min(860, int(root.winfo_screenheight() * .85))
+        root.geometry(f'{width}x{height}')
+        root.minsize(960, 600)
         style = ttk.Style(root)
         style.configure('TLabel', font=('Segoe UI', 10))
         style.configure('TButton', font=('Segoe UI', 10), padding=(8, 5))
@@ -124,17 +125,19 @@ class SpeakerViewer:
             self.load_demo()
 
     def build_ui(self) -> None:
-        header = ttk.Frame(self.root, padding=(16, 12, 16, 6))
+        header = ttk.Frame(self.root, padding=(12, 8, 12, 2))
         header.pack(fill='x')
-        ttk.Label(header, text='Speaker badge lab', font=('Segoe UI', 18, 'bold')).pack(side='left')
+        ttk.Label(header, text='Speaker badge lab', font=('Segoe UI', 14, 'bold')).pack(side='left')
         ttk.Label(header, text='DEMO DATA | Synthetic signals' if self.demo else 'High-rate acquisition | Bulk BLE | Human reference').pack(side='right')
-        controls = ttk.Frame(self.root, padding=(16, 4, 16, 10))
+        controls = ttk.Frame(self.root, padding=(12, 2, 12, 6))
         controls.pack(fill='x')
-        ttk.Label(controls, text='Badges (select one or more)').grid(row=0, column=0, sticky='w')
-        self.device_list = tk.Listbox(controls, height=5, width=39, selectmode='extended', exportselection=False, font=('Segoe UI', 10))
+        badge_header = ttk.Frame(controls)
+        badge_header.grid(row=0, column=0, sticky='ew', padx=(0, 12))
+        ttk.Label(badge_header, text='Badges (Ctrl/Shift for several)').pack(side='left')
+        self.scan_button = ttk.Button(badge_header, text='Scan BLE', command=self.scan)
+        self.scan_button.pack(side='right')
+        self.device_list = tk.Listbox(controls, height=4, width=36, selectmode='extended', exportselection=False, font=('Segoe UI', 10))
         self.device_list.grid(row=1, column=0, rowspan=3, sticky='nsew', padx=(0, 12))
-        self.scan_button = ttk.Button(controls, text='Scan BLE', command=self.scan)
-        self.scan_button.grid(row=4, column=0, sticky='w', pady=(5, 0))
         self.inputs = []
         for column, (label, variable, values, width) in enumerate([
             ('Recording ID', self.session, None, 20), ('Sample rate (Hz)', self.rate, ['10', '50', '100', '200'], 8),
@@ -145,50 +148,51 @@ class SpeakerViewer:
             widget.grid(row=1, column=column, sticky='ew', padx=6)
             self.inputs.append(widget)
         self.capture_button = ttk.Button(controls, text='Start recording', command=self.toggle_capture)
-        self.capture_button.grid(row=2, column=1, sticky='w', padx=6, pady=6)
+        self.capture_button.grid(row=2, column=1, sticky='w', padx=6, pady=4)
         self.folder_button = ttk.Button(controls, text='Open session folder', command=self.open_folder, state='disabled')
         self.folder_button.grid(row=2, column=2, columnspan=2, sticky='w', padx=6)
-        ttk.Label(controls, textvariable=self.status, wraplength=690).grid(row=3, column=1, columnspan=3, sticky='w', padx=6)
+        status = ttk.Label(controls, textvariable=self.status)
+        status.grid(row=3, column=1, columnspan=3, sticky='ew', padx=6)
+        status.bind('<Configure>', lambda event: status.configure(wraplength=max(200, event.width)))
         controls.columnconfigure(1, weight=1)
         self.panes = ttk.PanedWindow(self.root, orient='horizontal')
-        self.panes.pack(fill='both', expand=True, padx=16)
+        self.panes.pack(fill='both', expand=True, padx=12)
         self.monitor_pane = ttk.Frame(self.panes, width=1, height=1)
-        self.reference_pane = ttk.Frame(self.panes, width=560, height=1)
+        self.reference_pane = ttk.Frame(self.panes, width=400, height=1)
         self.panes.add(self.monitor_pane, weight=3)
-        self.panes.add(self.reference_pane, weight=2)
-        ttk.Label(self.reference_pane, text='Observer labels become available once the badges connect.\n'
-                  'Prediction charts are hidden while the observer panel is open.', padding=24).pack(anchor='w')
+        self.panes.add(self.reference_pane, weight=1)
+        ttk.Label(self.reference_pane, text='Observer labels become available once the badges connect. '
+                  'Prediction charts are hidden while the observer panel is open.', wraplength=360, padding=16).pack(anchor='w')
         self.table = ttk.Treeview(self.monitor_pane, columns=COLUMNS, show='headings', height=3)
         for name, label, width in zip(COLUMNS, ['Badge', 'Device', 'Link', 'Acquired Hz', 'Received', 'Seq gaps', 'New drops',
-                                                'Candidate', 'Model'], [80, 150, 100, 90, 90, 75, 90, 100, 120]):
+                                                'Candidate', 'Model'], [70, 120, 90, 80, 75, 65, 75, 90, 100]):
             self.table.heading(name, text=label)
-            self.table.column(name, width=width, stretch=True)
-        self.table.pack(fill='x', pady=(8, 6))
+            self.table.column(name, width=width, minwidth=50, stretch=True)
+        self.table.pack(fill='x', pady=(4, 4))
         plot_controls = ttk.Frame(self.monitor_pane)
-        plot_controls.pack(fill='x', pady=4)
+        plot_controls.pack(fill='x', pady=2)
+        charts = ttk.Menubutton(plot_controls, text='Charts')
+        charts.pack(side='left', padx=(0, 14))
+        self.chart_menu = tk.Menu(charts, tearoff=False)
+        charts['menu'] = self.chart_menu
+        self.plot_vars = {}
+        for field, title, _, default in PLOTS:
+            self.plot_vars[field] = tk.BooleanVar(value=default)
+            self.chart_menu.add_checkbutton(label=title, variable=self.plot_vars[field], command=self.rebuild_plots)
         ttk.Label(plot_controls, text='Visible seconds').pack(side='left')
-        ttk.Combobox(plot_controls, textvariable=self.window, values=['10', '20', '30', '60'], width=5, state='readonly').pack(side='left', padx=(5, 14))
-        ttk.Label(plot_controls, text='Plot refresh (Hz)').pack(side='left')
-        ttk.Combobox(plot_controls, textvariable=self.refresh, values=['1', '2', '5', '10'], width=5, state='readonly').pack(side='left', padx=5)
-        ttk.Label(plot_controls, text='Settings above apply at the next recording.').pack(side='right')
-        selectors = ttk.Frame(self.monitor_pane)
-        selectors.pack(fill='x')
-        self.plot_vars, self.plot_checks = {}, {}
-        for i, (field, title, _, default) in enumerate(PLOTS):
-            variable = tk.BooleanVar(value=default)
-            self.plot_vars[field] = variable
-            self.plot_checks[field] = ttk.Checkbutton(selectors, text=title, variable=variable, command=self.rebuild_plots)
-            self.plot_checks[field].grid(row=i // 4, column=i % 4, sticky='w', padx=(0, 14))
+        ttk.Combobox(plot_controls, textvariable=self.window, values=['10', '20', '30', '60'], width=4, state='readonly').pack(side='left', padx=(5, 14))
+        ttk.Label(plot_controls, text='Refresh (Hz)').pack(side='left')
+        ttk.Combobox(plot_controls, textvariable=self.refresh, values=['1', '2', '5', '10'], width=4, state='readonly').pack(side='left', padx=5)
         plot_area = ttk.Frame(self.monitor_pane, width=1, height=1)
-        plot_area.pack(fill='both', expand=True, pady=8)
+        plot_area.pack(fill='both', expand=True, pady=4)
         plot_area.pack_propagate(False)
         self.figure = Figure(figsize=(10, 5), dpi=100, constrained_layout=True)
         self.canvas = FigureCanvasTkAgg(self.figure, plot_area)
-        self.canvas.get_tk_widget().pack(fill='both', expand=True, pady=8)
+        self.canvas.get_tk_widget().pack(fill='both', expand=True)
         self.rebuild_plots()
-        footer = ttk.Frame(self.root, padding=(16, 8))
+        footer = ttk.Frame(self.root, padding=(12, 4))
         footer.pack(fill='x')
-        ttk.Label(footer, textvariable=self.saved, wraplength=850).pack(side='left')
+        ttk.Label(footer, textvariable=self.saved).pack(side='left')
         self.merge_button = ttk.Button(footer, text='Merge observer labels', command=self.merge_labels, state='disabled')
         self.merge_button.pack(side='right')
         if self.demo:
@@ -210,7 +214,7 @@ class SpeakerViewer:
             axis.grid(True, alpha=.2)
             self.axes[field] = axis
         if not selected:
-            self.figure.text(.5, .5, 'Select a chart above', ha='center')
+            self.figure.text(.5, .5, 'Choose charts from the Charts menu', ha='center')
         self.canvas.draw_idle()
 
     def emit(self, kind: str, payload: dict) -> None:
@@ -288,8 +292,9 @@ class SpeakerViewer:
         # Keep observer labels independent of the predictions they will be used to evaluate.
         self.annotating = active
         self.table.configure(displaycolumns=[c for c in COLUMNS if c not in ['candidate', 'model']] if active else '#all')
-        for field in PREDICTIONS:
-            self.plot_checks[field].configure(state='disabled' if active else 'normal')
+        for index, (field, *_) in enumerate(PLOTS):
+            if field in PREDICTIONS:
+                self.chart_menu.entryconfigure(index, state='disabled' if active else 'normal')
         self.rebuild_plots()
         self.draw()
 
@@ -306,7 +311,7 @@ class SpeakerViewer:
         window = canvas.create_window(0, 0, window=content, anchor='nw')
         content.bind('<Configure>', lambda _: canvas.configure(scrollregion=canvas.bbox('all')))
         canvas.bind('<Configure>', lambda event: canvas.itemconfigure(window, width=event.width))
-        ttk.Label(content, text=mapping, wraplength=480, padding=(16, 12)).pack(anchor='w')
+        ttk.Label(content, text=mapping, wraplength=360, padding=(12, 8, 12, 0)).pack(anchor='w')
         self.observer = ObserverPanel(self.root, self.session_dir / 'reference.csv', self.session.get().strip(), badges,
                                       container=content, on_close=self.observer_closed)
         self.set_annotating(True)

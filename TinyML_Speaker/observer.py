@@ -29,42 +29,65 @@ class ObserverPanel:
             root.minsize(760, 470)
             root.geometry(f'820x{max(500, 300 + 42 * len(badges))}')
         style = ttk.Style(root)
-        style.configure('TLabel', font=('Segoe UI', 11))
-        style.configure('TButton', font=('Segoe UI', 11), padding=(10, 7))
-        style.configure('TRadiobutton', font=('Segoe UI', 11), padding=(4, 3) if self.embedded else (8, 6))
-        body = self.body = ttk.Frame(container if container is not None else root, padding=16 if self.embedded else 24)
+        if self.embedded:
+            # The host window owns label and button styles; keep the panel compact beside the plots.
+            style.configure('TRadiobutton', font=('Segoe UI', 10), padding=(2, 2))
+        else:
+            style.configure('TLabel', font=('Segoe UI', 11))
+            style.configure('TButton', font=('Segoe UI', 11), padding=(10, 7))
+            style.configure('TRadiobutton', font=('Segoe UI', 11), padding=(8, 6))
+        compact = self.embedded
+        body = self.body = ttk.Frame(container if container is not None else root, padding=12 if compact else 24)
         body.pack(fill='both', expand=True)
-        ttk.Label(body, text='Who is speaking?', font=('Segoe UI', 16 if self.embedded else 20, 'bold')).pack(anchor='w')
-        if not self.embedded:
+        wrapped: list[ttk.Label] = []
+
+        def label(parent: tk.Widget, **options) -> ttk.Label:
+            widget = ttk.Label(parent, wraplength=750, **options)
+            wrapped.append(widget)
+            return widget
+
+        ttk.Label(body, text='Who is speaking?', font=('Segoe UI', 13 if compact else 20, 'bold')).pack(anchor='w')
+        if not compact:
             ttk.Label(body, text=f'Recording: {recording_id}').pack(anchor='w', pady=(4, 12))
         self.status = tk.StringVar(value='Paused. No speech or silence labels are being assigned.')
-        ttk.Label(body, textvariable=self.status, wraplength=480 if self.embedded else 750).pack(anchor='w', pady=(0, 16))
+        label(body, textvariable=self.status).pack(anchor='w', fill='x', pady=(0, 8 if compact else 16))
         table = ttk.Frame(body)
         table.pack(fill='x')
-        ttk.Label(table, text='Badge / shortcut', font=('Segoe UI', 11, 'bold')).grid(row=0, column=0, sticky='w', padx=(0, 20))
+        gap = 8 if compact else 20
+        ttk.Label(table, text='Badge' if compact else 'Badge / shortcut', font=('Segoe UI', 11, 'bold')).grid(
+            row=0, column=0, columnspan=2, sticky='w', padx=(0, gap))
+        choices = [('Speaking', 'active'), ('Quiet' if compact else 'Not speaking', 'not_active'), ('Unknown', 'unknown')]
         for i, badge in enumerate(badges, 1):
-            ttk.Label(table, text=f'{i}    {badge}').grid(row=i, column=0, sticky='w', padx=(0, 20))
-            for column, (text, value) in enumerate([('Speaking', 'active'), ('Not speaking', 'not_active'), ('Unknown', 'unknown')], 1):
+            ttk.Label(table, text=str(i)).grid(row=i, column=0, sticky='w', padx=(0, 6))
+            ttk.Label(table, text=badge).grid(row=i, column=1, sticky='w', padx=(0, gap))
+            for column, (text, value) in enumerate(choices, 2):
                 control = ttk.Radiobutton(table, text=text, value=value, variable=self.variables[badge],
                                           command=self.changed, state='disabled')
-                control.grid(row=i, column=column, sticky='w', pady=3)
+                control.grid(row=i, column=column, sticky='w', pady=2 if compact else 3)
                 self.controls.append(control)
         actions = ttk.Frame(body)
-        actions.pack(fill='x', pady=(20, 12))
-        self.start_button = ttk.Button(actions, text='Start observing (Enter)', command=self.start)
-        self.start_button.pack(side='left', padx=(0, 8))
-        ttk.Button(actions, text='Pause / uncertain (Space)', command=self.pause).pack(side='left')
-        ttk.Button(body, text='Observed silence (0)', command=self.silence).pack(anchor='w')
-        help_text = ('1–9 toggles speakers; 0 marks silence; Space pauses. Multiple speakers may be selected.\n'
-                     'Use Unknown when uncertain. Leaving the window pauses annotation.' if self.embedded else
+        actions.pack(fill='x', pady=(10, 6) if compact else (20, 12))
+        self.start_button = ttk.Button(actions, text='Start (Enter)' if compact else 'Start observing (Enter)', command=self.start)
+        pause = ttk.Button(actions, text='Pause (Space)' if compact else 'Pause / uncertain (Space)', command=self.pause)
+        silence = ttk.Button(actions if compact else body, text='Silence (0)' if compact else 'Observed silence (0)', command=self.silence)
+        self.start_button.pack(side='left', padx=(0, 6))
+        pause.pack(side='left', padx=(0, 6))
+        silence.pack(side='left') if compact else silence.pack(anchor='w')
+        help_text = ('Keys: 1–9 toggle speakers, 0 silence, Space pause. Use Unknown when uncertain. '
+                     'Leaving the window pauses annotation.' if compact else
                      '1–9 toggles a speaker. Multiple speakers may be selected.\n'
-                  'Start means you can observe every listed badge. Use Unknown for anyone you cannot judge.\n'
-                  'Switching to another window pauses annotation.')
-        ttk.Label(body, text=help_text, wraplength=480 if self.embedded else 750).pack(anchor='w', pady=(16, 12))
+                     'Start means you can observe every listed badge. Use Unknown for anyone you cannot judge.\n'
+                     'Switching to another window pauses annotation.')
+        label(body, text=help_text).pack(anchor='w', fill='x', pady=(8, 6) if compact else (16, 12))
         footer = ttk.Frame(body)
-        footer.pack(side='bottom', fill='x', pady=(8, 0))
-        ttk.Label(footer, text=f'Intervals save every {CHECKPOINT_MS / 1000:g} s. Closing saves the final interval.').pack(side='left')
-        ttk.Button(footer, text='Finish annotations' if self.embedded else 'Save and close', command=self.close).pack(side='right')
+        footer.pack(side='bottom', fill='x', pady=(4, 0))
+        ttk.Button(footer, text='Finish annotations' if compact else 'Save and close', command=self.close).pack(
+            side='top' if compact else 'right', anchor='w')
+        label(footer, text=f'Intervals save every {CHECKPOINT_MS / 1000:g} s. Closing saves the final interval.').pack(
+            side='top' if compact else 'left', anchor='w', pady=(4, 0) if compact else 0)
+        if compact:
+            body.bind('<Configure>', lambda event: [widget.configure(wraplength=max(160, event.width - 30))
+                                                    for widget in wrapped])
         self.bindings = {sequence: root.bind(sequence, callback, add='+') for sequence, callback in [
             ('<KeyPress>', self.key_down),
             ('<KeyRelease>', lambda event: self.pressed.discard(event.keysym)),
