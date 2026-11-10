@@ -104,7 +104,7 @@ def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, m
     class Scanner:
         @staticmethod
         async def discover(**kwargs):
-            return [SimpleNamespace(address='synthetic-device', name='test')]
+            return [SimpleNamespace(address='synthetic-device', name=None)]
 
     class Client:
         def __init__(self, device):
@@ -177,7 +177,7 @@ def test_receiver_skips_unreachable_badge_and_reconnects_dropped_one(tmp_path, m
     class Scanner:
         @staticmethod
         async def discover(**kwargs):
-            return [SimpleNamespace(address=name, name='test') for name in ['good', 'down']]
+            return [SimpleNamespace(address=name, name=name) for name in ['good', 'down']]
 
     class Client:
         current = None
@@ -224,10 +224,16 @@ def test_receiver_skips_unreachable_badge_and_reconnects_dropped_one(tmp_path, m
                               rate=200, send_seconds=2, seconds=10, raw_only=True)
     asyncio.run(asyncio.wait_for(pipeline.receive(args, on_event=on_event, stop_event=stopped), timeout=10))
     connected = next(payload for kind, payload in events if kind == 'connected')
-    assert connected['badges'] == ['badge_01'] and connected['failed'] == ['badge_02']
+    assert connected['badges'] == ['good'] and connected['failed'] == ['down']
     assert connects['down'] == pipeline.CONNECT_ATTEMPTS
     assert [payload['state'] for kind, payload in events if kind == 'link'] == ['reconnecting', 'connected']
     assert [c.split()[0] for c in commands['good']] == ['RATE', 'SEND', 'CLOCK', 'CLOCK', 'STOP']
     frame = pd.read_csv(next(tmp_path.glob('*_raw.csv')))
     assert list(frame.seq) == [10, 11, 20, 21]
     assert list(frame.seq_gap) == [0, 0, 8, 0]
+
+
+def test_flashed_badge_names_become_stable_ids():
+    from pipeline import DEFAULT_BADGE_NAME, badge_ids
+    assert badge_ids(['red', None, DEFAULT_BADGE_NAME, 'bad name!']) == ['red', 'badge_02', 'badge_03', 'badge_04']
+    assert badge_ids(['same', 'same', 'badge_01']) == ['badge_01', 'badge_02', 'badge_01_x']

@@ -1,9 +1,14 @@
 param(
     [ValidateSet('setup', 'build', 'upload', 'boards')]
     [string]$Action = 'build',
-    [string]$Port
+    [string]$Port,
+    [string]$Name
 )
 $ErrorActionPreference = 'Stop'
+if ($Name -and $Name -cnotmatch '^[A-Za-z0-9][A-Za-z0-9_-]{0,19}$') {
+    throw 'Use a badge name of 1-20 letters, digits, underscores, or hyphens, starting with a letter or digit.'
+}
+$nameHeader = Join-Path $PSScriptRoot 'firmware/SpeakerBadge/badge_name.h'
 $cli = Join-Path $PSScriptRoot '.tools/arduino-cli.exe'
 if (-not (Test-Path -LiteralPath $cli)) {
     $command = Get-Command arduino-cli -ErrorAction SilentlyContinue
@@ -35,6 +40,12 @@ try {
         Invoke-Arduino board list
     } else {
         $sketch = Join-Path $PSScriptRoot 'firmware/SpeakerBadge'
+        if ($Name) {
+            "#define BADGE_NAME `"$Name`"" | Set-Content -LiteralPath $nameHeader
+            Write-Host "Building firmware that advertises as $Name"
+        } elseif ($Action -eq 'upload') {
+            Write-Warning 'No -Name given. The badge advertises the shared default name and the PC numbers it by scan order.'
+        }
         Invoke-Arduino compile --fqbn arduino:mbed_nano:nano33ble $sketch
         if ($Action -eq 'upload') {
             if (-not $Port) { throw 'Supply -Port COMn. Use firmware.ps1 boards to list ports.' }
@@ -42,5 +53,6 @@ try {
         }
     }
 } finally {
+    Remove-Item -LiteralPath $nameHeader -ErrorAction SilentlyContinue
     & subst $drive /D
 }

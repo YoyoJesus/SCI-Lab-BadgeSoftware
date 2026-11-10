@@ -34,7 +34,18 @@ the tool directory to avoid GCC's Windows path-length limit, then removes it.
 
 Use the board's actual port, not the example value. If PowerShell blocks local
 scripts, invoke them with `powershell -ExecutionPolicy Bypass -File .\firmware.ps1 build`.
-Upload this standalone sketch to each badge. It boots without USB connected.
+Upload this standalone sketch to each badge, giving each one a unique name:
+
+```powershell
+.\firmware.ps1 upload -Port COM5 -Name badge_01
+```
+
+The name (1-20 letters, digits, underscores, or hyphens) is built into that
+badge's firmware and advertised over BLE, so the receiver, viewer, and CSV files
+use it as the badge ID in every session. Label each physical badge to match.
+Without `-Name`, the badge advertises the shared default name and the PC numbers
+it by scan order, which can change between runs. Re-uploading, including after
+training a model, needs the same `-Name` again. The sketch boots without USB connected.
 The LED follows its local candidate flag. Rapid blinking at startup indicates
 IMU/BLE failure; slower blinking indicates microphone initialization failure.
 
@@ -46,8 +57,9 @@ IMU/BLE failure; slower blinking indicates microphone initialization failure.
 ```
 
 The receiver connects to badges advertising the new service. To select devices,
-repeat `--address ADDRESS` using addresses from the scan. Device assignments
-`badge_01`, etc. are printed at connection; assignments may change next run.
+repeat `--address ADDRESS` using addresses from the scan. Named badges keep
+their flashed name as the badge ID. Unnamed or duplicate-named badges get
+`badge_01`, etc. by sorted order, printed at connection; those may change next run.
 Use anonymous recording IDs, consistently across files from the same session.
 The new service is deliberately separate from the legacy collector's protocol.
 
@@ -139,7 +151,7 @@ be measured, not assumed.
 
 ```powershell
 .\run.bat train data/session_01.csv data/session_02.csv data/session_03.csv
-.\firmware.ps1 upload -Port COM5
+.\firmware.ps1 upload -Port COM5 -Name badge_01
 ```
 
 Training exports `firmware/SpeakerBadge/model.h` and `outputs/model/evaluation.json`.

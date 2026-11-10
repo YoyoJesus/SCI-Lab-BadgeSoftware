@@ -12,6 +12,12 @@
 #define HAS_MODEL 0
 #define SPEAKER_MODEL_ID "paper-rule"
 #endif
+#if __has_include("badge_name.h")
+#include "badge_name.h"
+#endif
+#ifndef BADGE_NAME
+#define BADGE_NAME "SCI Speaker v2"
+#endif
 
 BLEService service("e8310001-65d2-4b11-91e0-87f64f931c82");
 BLECharacteristic readings("e8310002-65d2-4b11-91e0-87f64f931c82", BLERead | BLENotify, 244);
@@ -282,7 +288,8 @@ void setup() {
   if (!PDM.begin(1, 16000)) {
     while (true) { digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); delay(500); }
   }
-  BLE.setLocalName("SCI Speaker v2");
+  BLE.setLocalName(BADGE_NAME);
+  BLE.setDeviceName(BADGE_NAME);
   BLE.setConnectionInterval(6, 12);
   BLE.setAdvertisedService(service);
   service.addCharacteristic(readings);

@@ -259,7 +259,8 @@ class SpeakerViewer:
             from bleak import BleakScanner
             try:
                 devices = asyncio.run(BleakScanner.discover(timeout=5, service_uuids=[SERVICE]))
-                self.emit('devices', {'devices': [(d.address, d.name or 'Speaker badge') for d in devices]})
+                found = sorted(devices, key=lambda d: (d.name or '', d.address))
+                self.emit('devices', {'devices': [(d.address, d.name or 'Speaker badge') for d in found]})
             except Exception as error:
                 self.emit('scan_error', {'error': f'{type(error).__name__}: {error}'})
         threading.Thread(target=work, daemon=True).start()

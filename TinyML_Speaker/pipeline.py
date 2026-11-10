@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 import time
 from typing import Callable, Optional
@@ -20,6 +21,7 @@ ROOT = Path(__file__).resolve().parent
 SERVICE = 'e8310001-65d2-4b11-91e0-87f64f931c82'
 CHARACTERISTIC = 'e8310002-65d2-4b11-91e0-87f64f931c82'
 CONNECT_ATTEMPTS = 3
+DEFAULT_BADGE_NAME = 'SCI Speaker v2'
 RETRY_SECONDS = 2.0
 FEATURES = ['norm_sound', 'norm_accel', 'presence_margin', 'Gyro_Magnitude',
             'Mag_Magnitude', 'Temperature', 'Humidity', 'Pressure', 'Proximity']
@@ -238,6 +240,20 @@ def replay(args: argparse.Namespace) -> None:
     print(f'Wrote {output}; causal adaptation, not an exact historical reproduction.')
 
 
+def badge_ids(names: list[Optional[str]]) -> list[str]:
+    """Use names flashed onto badges as IDs; number unnamed or duplicate badges by position."""
+    ids: list[str] = []
+    for index, name in enumerate(names, 1):
+        flashed = name and name != DEFAULT_BADGE_NAME and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}', name)
+        if flashed and names.count(name) > 1:
+            print(f'Several badges advertise {name}; flash each with a unique -Name')
+        candidate = name if flashed and names.count(name) == 1 else f'badge_{index:02d}'
+        while candidate in ids:
+            candidate += '_x'
+        ids.append(candidate)
+    return ids
+
+
 async def receive(args: argparse.Namespace, on_event: Optional[Callable[[str, dict], None]] = None,
                   stop_event: Optional[Event] = None) -> None:
     from bleak import BleakClient, BleakScanner
@@ -248,7 +264,8 @@ async def receive(args: argparse.Namespace, on_event: Optional[Callable[[str, di
         for device in discovered:
             print(device.address, device.name)
         return
-    devices = [d for d in discovered if not args.address or d.address in args.address]
+    devices = sorted((d for d in discovered if not args.address or d.address in args.address),
+                     key=lambda d: (d.name or '', d.address))
     if not devices:
         raise ValueError('No matching badges advertising the new service')
     output = Path(args.output)
@@ -338,8 +355,7 @@ async def receive(args: argparse.Namespace, on_event: Optional[Callable[[str, di
 
         try:
             failed = []
-            for i, device in enumerate(devices):
-                badge = f'badge_{i + 1:02d}'
+            for badge, device in zip(badge_ids([d.name for d in devices]), devices):
                 device_map[badge] = device.address
                 sessions[badge] = BulkSession()
                 if not await connect(badge, device, first=True):
