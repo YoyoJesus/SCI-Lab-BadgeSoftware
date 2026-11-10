@@ -8,6 +8,9 @@ no wearer-detection accuracy or battery-life result is established.
 
 ## Start on Windows
 
+For the combined live monitor and observer panel, see the [desktop viewer](VIEWER.md).
+After setup, launch it with `.\run_viewer.bat`. The CLI workflow below remains available.
+
 Python 3.9 or later and a BLE adapter are required. From this folder:
 
 ```powershell
@@ -215,7 +218,7 @@ See the [single-board hardware check](HARDWARE_CHECK.md) for measured sampling
 and BLE delivery. Multi-badge delivery, long-duration stability, runtime memory
 headroom, power use, and speech-detection accuracy still need measurement.
 
-Validation performed: twenty-seven workflow pytest checks and the three existing paper
+Validation performed: thirty-five workflow pytest checks and the three existing paper
 validation checks passed. Both paper-only and synthetic-model firmware builds
 compiled with Arduino Mbed Nano core 4.6.0. The synthetic model checked the export
 and compilation path only; no trained speech model is included. Paper-rule

@@ -9,26 +9,32 @@ from ground_truth import IntervalRecorder
 
 
 class ObserverPanel:
-    def __init__(self, root: tk.Tk, output: Path, recording_id: str, badges: list[str]) -> None:
+    def __init__(self, root: tk.Tk, output: Path, recording_id: str, badges: list[str],
+                 container: Optional[ttk.Frame] = None) -> None:
         self.root = root
         self.recorder = IntervalRecorder(output, recording_id, badges, datetime.now(timezone.utc))
         self.paused = True
         self.closed = False
+        self.focus_timer = None
+        self.embedded = container is not None
+        self.enabled = not self.embedded
         self.pressed: set[str] = set()
         self.badges = badges
         self.variables = {badge: tk.StringVar(value='unknown') for badge in badges}
         self.controls: list[ttk.Radiobutton] = []
-        root.title('Speaker reference | Observer')
-        root.minsize(760, 470)
-        root.geometry(f'820x{max(500, 300 + 42 * len(badges))}')
+        if not self.embedded:
+            root.title('Speaker reference | Observer')
+            root.minsize(760, 470)
+            root.geometry(f'820x{max(500, 300 + 42 * len(badges))}')
         style = ttk.Style(root)
         style.configure('TLabel', font=('Segoe UI', 11))
         style.configure('TButton', font=('Segoe UI', 11), padding=(10, 7))
         style.configure('TRadiobutton', font=('Segoe UI', 11), padding=(8, 6))
-        body = ttk.Frame(root, padding=24)
+        body = self.body = ttk.Frame(container if container is not None else root, padding=16 if self.embedded else 24)
         body.pack(fill='both', expand=True)
-        ttk.Label(body, text='Who is speaking?', font=('Segoe UI', 20, 'bold')).pack(anchor='w')
-        ttk.Label(body, text=f'Recording: {recording_id}').pack(anchor='w', pady=(4, 12))
+        ttk.Label(body, text='Who is speaking?', font=('Segoe UI', 16 if self.embedded else 20, 'bold')).pack(anchor='w')
+        if not self.embedded:
+            ttk.Label(body, text=f'Recording: {recording_id}').pack(anchor='w', pady=(4, 12))
         self.status = tk.StringVar(value='Paused. No speech or silence labels are being assigned.')
         ttk.Label(body, textvariable=self.status, wraplength=750).pack(anchor='w', pady=(0, 16))
         table = ttk.Frame(body)
@@ -46,24 +52,30 @@ class ObserverPanel:
         self.start_button = ttk.Button(actions, text='Start observing (Enter)', command=self.start)
         self.start_button.pack(side='left', padx=(0, 8))
         ttk.Button(actions, text='Pause / uncertain (Space)', command=self.pause).pack(side='left')
-        ttk.Button(body, text='Observed silence (0)', command=self.silence).pack(anchor='w')
-        ttk.Label(body, text='1–9 toggles a speaker. Multiple speakers may be selected.\n'
+        silence = ttk.Button(actions if self.embedded else body, text='Observed silence (0)', command=self.silence)
+        silence.pack(side='left', padx=8) if self.embedded else silence.pack(anchor='w')
+        help_text = ('1–9 toggles speakers; 0 marks silence; Space pauses. Multiple speakers may be selected.\n'
+                     'Use Unknown when uncertain. Leaving this tab or window pauses annotation.' if self.embedded else
+                     '1–9 toggles a speaker. Multiple speakers may be selected.\n'
                   'Start means you can observe every listed badge. Use Unknown for anyone you cannot judge.\n'
-                  'Switching to another window pauses annotation.', wraplength=750).pack(anchor='w', pady=(16, 12))
+                  'Switching to another window pauses annotation.')
+        ttk.Label(body, text=help_text, wraplength=1000 if self.embedded else 750).pack(anchor='w', pady=(16, 12))
         footer = ttk.Frame(body)
         footer.pack(side='bottom', fill='x', pady=(8, 0))
         ttk.Label(footer, text='Intervals save every second. Closing saves the final interval.').pack(side='left')
-        ttk.Button(footer, text='Save and close', command=self.close).pack(side='right')
-        root.bind('<KeyPress>', self.key_down)
-        root.bind('<KeyRelease>', lambda event: self.pressed.discard(event.keysym))
-        root.bind('<FocusOut>', lambda _: root.after(100, self.check_focus))
-        root.protocol('WM_DELETE_WINDOW', self.close)
-        root.update_idletasks()
-        width = max(820, root.winfo_reqwidth())
-        height = max(500, root.winfo_reqheight())
-        root.minsize(width, height)
-        root.geometry(f'{width}x{height}')
-        root.after(1000, self.checkpoint)
+        ttk.Button(footer, text='Finish annotations' if self.embedded else 'Save and close', command=self.close).pack(side='right')
+        self.bindings = {sequence: root.bind(sequence, callback, add='+') for sequence, callback in [
+            ('<KeyPress>', self.key_down),
+            ('<KeyRelease>', lambda event: self.pressed.discard(event.keysym)),
+            ('<FocusOut>', lambda _: self.queue_focus_check())]}
+        if not self.embedded:
+            root.protocol('WM_DELETE_WINDOW', self.close)
+            root.update_idletasks()
+            width = max(820, root.winfo_reqwidth())
+            height = max(500, root.winfo_reqheight())
+            root.minsize(width, height)
+            root.geometry(f'{width}x{height}')
+        self.checkpoint_timer = root.after(1000, self.checkpoint)
 
     def save(self) -> None:
         try:
@@ -71,11 +83,17 @@ class ObserverPanel:
         except (ValueError, OSError) as error:
             self.closed = True
             self.recorder.handle.close()
+            self.recorder.closed = True
             messagebox.showerror('Annotation stopped', f'Could not save the next interval: {error}', parent=self.root)
-            self.root.destroy()
+            self.dispose_ui()
 
     def changed(self) -> None:
         self.save()
+
+    def set_active(self, active: bool) -> None:
+        self.enabled = active
+        if not active:
+            self.pause()
 
     def start(self) -> None:
         if self.closed:
@@ -111,6 +129,8 @@ class ObserverPanel:
             self.save()
 
     def key_down(self, event: tk.Event) -> Optional[str]:
+        if self.closed or not self.enabled:
+            return None
         key = event.keysym
         if key not in ['space', 'Return', '0'] + [str(i) for i in range(1, len(self.badges) + 1)]:
             return None
@@ -131,11 +151,28 @@ class ObserverPanel:
             self.pressed.clear()
             self.pause()
 
+    def queue_focus_check(self) -> None:
+        if not self.closed:
+            if self.focus_timer:
+                self.root.after_cancel(self.focus_timer)
+            self.focus_timer = self.root.after(100, self.check_focus)
+
     def checkpoint(self) -> None:
         if not self.closed:
             self.save()
             if not self.closed:
-                self.root.after(1000, self.checkpoint)
+                self.checkpoint_timer = self.root.after(1000, self.checkpoint)
+
+    def dispose_ui(self) -> None:
+        for timer in [self.focus_timer, self.checkpoint_timer]:
+            if timer:
+                self.root.after_cancel(timer)
+        for sequence, binding in self.bindings.items():
+            self.root.unbind(sequence, binding)
+        if self.embedded:
+            self.body.destroy()
+        else:
+            self.root.destroy()
 
     def close(self) -> None:
         if not self.closed:
@@ -144,7 +181,7 @@ class ObserverPanel:
                 self.recorder.close(datetime.now(timezone.utc))
             except (ValueError, OSError) as error:
                 messagebox.showerror('Final interval not saved', str(error), parent=self.root)
-            self.root.destroy()
+            self.dispose_ui()
 
 
 def launch(output: Path, recording_id: str, badges: list[str]) -> None:

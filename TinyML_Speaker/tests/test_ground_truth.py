@@ -89,11 +89,9 @@ def test_checkpoints_do_not_create_false_label_boundaries(tmp_path):
     assert merge_annotations(samples, pd.read_csv(path), boundary_ms=200).activity_label.iloc[0] == 'active'
 
 
-def test_observer_panel_starts_unknown_and_handles_overlap(tmp_path):
-    import tkinter as tk
+def test_observer_panel_starts_unknown_and_handles_overlap(tmp_path, tk_window):
     from observer import ObserverPanel
-    root = tk.Tk()
-    root.withdraw()
+    root = tk_window
     try:
         panel = ObserverPanel(root, tmp_path / 'ui.csv', 's', ['a', 'b'])
         assert panel.paused and set(panel.recorder.states.values()) == {'unknown'}

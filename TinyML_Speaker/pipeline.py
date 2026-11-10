@@ -9,7 +9,8 @@ import json
 import math
 from pathlib import Path
 import time
-from typing import Optional
+from typing import Callable, Optional
+from threading import Event
 
 import numpy as np
 import pandas as pd
@@ -235,7 +236,8 @@ def replay(args: argparse.Namespace) -> None:
     print(f'Wrote {output}; causal adaptation, not an exact historical reproduction.')
 
 
-async def receive(args: argparse.Namespace) -> None:
+async def receive(args: argparse.Namespace, on_event: Optional[Callable[[str, dict], None]] = None,
+                  stop_event: Optional[Event] = None) -> None:
     from bleak import BleakClient, BleakScanner
     from transport import BulkSession, CONTROL
     import pandas as pd
@@ -256,28 +258,37 @@ async def receive(args: argparse.Namespace) -> None:
     errors: list[str] = []
     clients = []
     sample_count = 0
+    device_map = {}
+    def emit(kind: str, payload: dict) -> None:
+        if on_event:
+            on_event(kind, payload)
     with raw_path.open('x', newline='', encoding='utf-8') as handle:
         columns = ['Timestamp', 'Arrival_Timestamp', 'Clock_Source', 'Badge_Name', 'Person_Name',
                    'Recording_ID', 'model_id', 'RSSI', 'seq_gap'] + FIELDS
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
+        emit('session', {'raw_path': str(raw_path), 'recording_id': args.recording_id})
 
         def on_data(badge: str, data: bytearray) -> None:
             nonlocal sample_count
             if errors:
                 return
             try:
-                for row in sessions[badge].feed(bytes(data), datetime.now(timezone.utc)):
+                received = sessions[badge].feed(bytes(data), datetime.now(timezone.utc))
+                for row in received:
                     row.update(Badge_Name=badge, Person_Name='', Recording_ID=args.recording_id, RSSI='')
                     writer.writerow(row)
                     sample_count += 1
                 handle.flush()
+                if received:
+                    emit('samples', {'badge': badge, 'rows': received})
             except (ValueError, OSError) as error:
                 errors.append(f'{badge}: {error}')
 
         try:
             for i, device in enumerate(devices):
                 badge = f'badge_{i + 1:02d}'
+                device_map[badge] = device.address
                 print(f'{badge}: connecting to {device.address}')
                 client = BleakClient(device)
                 await client.connect()
@@ -300,8 +311,9 @@ async def receive(args: argparse.Namespace) -> None:
                 else:
                     print(f'{badge}: legacy firmware; timestamps are BLE arrival times, rate settings unavailable')
             print(f'Recording scalar readings to {raw_path} for {args.seconds:g} seconds')
+            emit('connected', {'badges': list(sessions), 'devices': device_map})
             started = time.monotonic()
-            while time.monotonic() - started < args.seconds:
+            while time.monotonic() - started < args.seconds and not (stop_event and stop_event.is_set()):
                 if errors:
                     raise ValueError(errors[0])
                 if any(not client.is_connected for client in clients):
@@ -327,6 +339,7 @@ async def receive(args: argparse.Namespace) -> None:
                     label_frame(pd.read_csv(raw_path)).to_csv(labeled, index=False)
                     print(f'Labeled CSV: {labeled}')
                 print(f'Saved {sample_count} samples')
+                emit('finished', {'raw_path': str(raw_path), 'samples': sample_count})
 
 
 def main() -> None:
@@ -363,6 +376,8 @@ def main() -> None:
     evaluation.add_argument('csv')
     evaluation.add_argument('--prediction', choices=['candidate', 'paper_candidate'], default='candidate')
     evaluation.add_argument('--output', required=True)
+    viewer = commands.add_parser('viewer', help='Open the live BLE dashboard and independent observer tab')
+    viewer.add_argument('--demo', action='store_true', help='Show explicitly labeled synthetic data without BLE')
     args = parser.parse_args()
     if args.command == 'receive' and (not math.isfinite(args.seconds) or args.seconds <= 0):
         parser.error('--seconds must be positive and finite')
@@ -392,6 +407,9 @@ def main() -> None:
             with target.open('x', encoding='utf-8') as handle:
                 json.dump(report, handle, indent=2)
             print(f'Wrote reference evaluation to {target}')
+        elif args.command == 'viewer':
+            from viewer import launch
+            launch(demo=args.demo)
         else:
             asyncio.run(receive(args))
     except (ValueError, OSError, ConnectionError) as error:

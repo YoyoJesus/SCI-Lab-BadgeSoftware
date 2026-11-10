@@ -81,17 +81,25 @@ def test_session_rejects_bad_flags_and_sequence_reversal():
         session.feed(packet(), datetime.now(timezone.utc))
 
 
-@pytest.mark.parametrize('cancel', [False, True])
-def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, cancel):
+@pytest.mark.parametrize('mode', ['duration', 'cancel', 'stop'])
+def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, mode):
     import argparse
     import asyncio
     from types import SimpleNamespace
     import bleak
     import pandas as pd
     import pipeline
+    from threading import Event
     from transport import CONTROL
     commands = []
     ready = None
+    cancel = mode == 'cancel'
+    stopped = Event()
+    events = []
+    def on_event(kind, payload):
+        events.append((kind, payload))
+        if mode == 'stop' and kind == 'connected':
+            stopped.set()
 
     class Scanner:
         @staticmethod
@@ -124,11 +132,11 @@ def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, c
     monkeypatch.setattr(bleak, 'BleakScanner', Scanner)
     monkeypatch.setattr(bleak, 'BleakClient', Client)
     args = argparse.Namespace(scan=False, address=None, output=tmp_path, recording_id='test',
-                              rate=200, send_seconds=2, seconds=100 if cancel else .001, raw_only=cancel)
+                              rate=200, send_seconds=2, seconds=.001 if mode == 'duration' else 100, raw_only=cancel)
     async def run():
         nonlocal ready
         ready = asyncio.Event()
-        task = asyncio.create_task(pipeline.receive(args))
+        task = asyncio.create_task(pipeline.receive(args, on_event=on_event, stop_event=stopped))
         if cancel:
             await asyncio.wait_for(ready.wait(), timeout=5)
             task.cancel()
@@ -146,5 +154,7 @@ def test_receiver_configures_rate_and_drains_final_bulk(tmp_path, monkeypatch, c
     assert commands[1] == 'SEND 2000\n'
     assert commands[2].startswith('CLOCK ')
     assert commands[-1] == 'STOP\n'
+    assert sum(len(payload['rows']) for kind, payload in events if kind == 'samples') == 4
+    assert any(kind == 'connected' and payload['badges'] == ['badge_01'] for kind, payload in events)
     if not cancel:
         assert len(pd.read_csv(next(tmp_path.glob('*_labeled.csv')))) == 4
