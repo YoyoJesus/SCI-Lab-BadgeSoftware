@@ -44,7 +44,7 @@ annotation, or times outside the reference recording into negative examples.
 Use a second observer or adjudicated recordings to assess annotation agreement
 before treating these labels as a stronger reference.
 
-Intervals are flushed to a local CSV every second and on changes/close. If the
+Intervals are flushed to a local CSV every 0.2 seconds and on changes/close. If the
 process is forcibly terminated, its last unflushed interval is absent and stays
 unknown. Existing files are never overwritten. Start a new file after a crash.
 You can correct the interval CSV afterward; do not create overlapping intervals

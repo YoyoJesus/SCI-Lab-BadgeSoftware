@@ -50,20 +50,23 @@ be several seconds old when sending in bulk. It is an estimate, not a reference
 annotation. `paper-rule` means no trained hybrid model is active. The optional
 model-score chart has no valid score while the firmware reports -1.
 
-![Live monitor with synthetic signals](docs/screenshots/viewer-live.png)
-
 ## Make independent observer labels
 
-Once connected, switch to **Observer labels**. This hides the prediction table
-and plots. Start observing explicitly, then mark speaking, not speaking, or
-unknown for each wearer. Multiple speakers are supported. The keyboard shortcuts
-are the same as the standalone panel: 1–9 toggle speakers, 0 marks observed
-silence, and Space pauses.
+The observer panel sits beside the live plots, so raw sensor data stays visible
+while you annotate. Drag the divider to resize either side. While the panel is
+open, the paper speech score, local candidate, and hybrid model charts and table
+columns are hidden, so labels stay independent of the predictions they will be
+used to evaluate. Click **Finish annotations** to show them again.
 
-Switching back to the monitor or leaving the window pauses annotation and keeps
-that time unknown. Finishing annotations does not stop badge capture. Labels are
-saved to `reference.csv` in the same session folder; a failed annotation save
-stops the observer panel without closing the live viewer.
+Start observing explicitly, then mark speaking, not speaking, or unknown for each
+wearer. Multiple speakers are supported. The keyboard shortcuts are the same as
+the standalone panel: 1–9 toggle speakers, 0 marks observed silence, and Space
+pauses. Leaving the window pauses annotation and keeps that time unknown.
+Finishing annotations does not stop badge capture.
+
+Labels are saved to `reference.csv` in the same session folder. Each change is
+written immediately, and the current interval is checkpointed every 0.2 seconds.
+A failed annotation save stops the observer panel without closing the live viewer.
 
 After stopping the recording, click **Merge observer labels** to create
 `training.csv`. The merge preserves unobserved time as unknown and excludes
@@ -71,7 +74,7 @@ After stopping the recording, click **Merge observer labels** to create
 file. Train from multiple independently labeled sessions using the existing
 `run.bat train` command. See [ground-truth timing and labeling guidance](GROUND_TRUTH.md).
 
-![Observer tab with synthetic badge identities](docs/screenshots/viewer-reference.png)
+![Live plots beside the observer panel with synthetic badge identities](docs/screenshots/viewer-annotating.png)
 
 ## Validation and limits
 
@@ -81,7 +84,7 @@ CSV and plot receiver contained the same number of rows, with zero sequence
 gaps and zero new device drops. Stop/drain and a merge with no observed labels
 completed; all merged rows correctly remained unknown.
 
-Synthetic UI tests cover the demo, embedded observer lifecycle, tab pause,
+Synthetic UI tests cover the demo, embedded observer lifecycle, prediction hiding during annotation, sub-second checkpoints,
 reference-save failure, empty connection-error reporting, and cross-badge plot
 alignment. This does not establish multi-board reliability, speaker accuracy,
 or independent human annotation quality. Matplotlib on the current Python 3.9

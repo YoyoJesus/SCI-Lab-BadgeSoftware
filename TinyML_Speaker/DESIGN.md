@@ -48,14 +48,15 @@ artifacts are ignored by git. Engagement inference stays on the PC.
 The combined viewer follows the old native viewer's scan/settings, selectable
 plots, bounded history, and plot decimation. Its background worker calls the
 same receiver as the CLI; CSV recording precedes preview callbacks. The live
-monitor and independent observer are separate notebook pages. Entering the
-observer page hides predictions; leaving it pauses labels. Recording and label
+monitor and independent observer share a resizable split view. While the
+observer panel is open, prediction charts and columns are hidden; raw sensor
+plots stay visible. Leaving the window pauses labels. Recording and label
 intervals share a session directory and recording ID, with an explicit merge
 after recording stops. Demo screenshots use synthetic signals and identities.
 
 The independent PC reference uses an observer-only Tkinter panel. Per-badge
 states support overlapping speakers and explicit unknown intervals. State
-changes and one-second checkpoints save half-open UTC intervals. Focus loss
+changes and 0.2-second checkpoints save half-open UTC intervals. Focus loss
 pauses annotation. Merge by recording/badge and estimated acquisition timestamp, preserving
 unknown time and excluding a configurable transition margin. Evaluate only
 annotated samples; prediction output is hidden from the observer panel.

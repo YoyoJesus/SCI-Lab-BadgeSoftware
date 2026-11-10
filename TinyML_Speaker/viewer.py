@@ -35,6 +35,8 @@ PLOTS = [
     ('Pressure', 'Pressure', 'kPa', False),
     ('Proximity', 'Proximity', 'counts', False),
 ]
+PREDICTIONS = {'speech_score', 'candidate', 'model_score'}
+COLUMNS = ('badge', 'device', 'rate', 'received', 'gaps', 'drops', 'candidate', 'model')
 
 
 def candidate_state(row: dict) -> str:
@@ -88,7 +90,7 @@ class PlotHistory:
 class SpeakerViewer:
     def __init__(self, root: tk.Tk, demo: bool = False, output_root: Path = ROOT / 'outputs') -> None:
         self.root, self.demo, self.output_root = root, demo, output_root
-        self.running = self.closing = self.destroyed = False
+        self.running = self.closing = self.destroyed = self.annotating = False
         self.preview_skips = 0
         self.history = PlotHistory()
         self.events: queue.Queue = queue.Queue()
@@ -106,8 +108,9 @@ class SpeakerViewer:
         self.status = tk.StringVar(value='Demo data only. No badge is connected.' if demo else 'Scan for badges, select devices, then start a recording.')
         self.saved = tk.StringVar(value='Every received sample is saved. Plotting uses a bounded, thinned history.')
         root.title('Speaker badge lab' + (' | DEMO DATA' if demo else ''))
-        root.geometry('1240x880')
-        root.minsize(1040, 740)
+        root.geometry('1480x900')
+        root.minsize(1200, 740)
+        root.state('zoomed')
         style = ttk.Style(root)
         style.configure('TLabel', font=('Segoe UI', 10))
         style.configure('TButton', font=('Segoe UI', 10), padding=(8, 5))
@@ -146,36 +149,36 @@ class SpeakerViewer:
         self.folder_button.grid(row=2, column=2, columnspan=2, sticky='w', padx=6)
         ttk.Label(controls, textvariable=self.status, wraplength=690).grid(row=3, column=1, columnspan=3, sticky='w', padx=6)
         controls.columnconfigure(1, weight=1)
-        self.tabs = ttk.Notebook(self.root, width=1, height=1)
-        self.tabs.pack(fill='both', expand=True, padx=16)
-        self.monitor_tab, self.reference_tab = ttk.Frame(self.tabs), ttk.Frame(self.tabs)
-        self.tabs.add(self.monitor_tab, text='Live monitor')
-        self.tabs.add(self.reference_tab, text='Observer labels')
-        self.tabs.bind('<<NotebookTabChanged>>', lambda _: self.tab_changed())
-        ttk.Label(self.reference_tab, text='Observer labels become available once the badges connect.\n'
-                  'The monitor is hidden during annotation; leaving this tab pauses labels.', padding=24).pack(anchor='w')
-        columns = ('badge', 'device', 'rate', 'received', 'gaps', 'drops', 'candidate', 'model')
-        self.table = ttk.Treeview(self.monitor_tab, columns=columns, show='headings', height=3)
-        for name, label, width in zip(columns, ['Badge', 'Device', 'Acquired Hz', 'Received', 'Seq gaps', 'New drops', 'Candidate', 'Model'],
+        self.panes = ttk.PanedWindow(self.root, orient='horizontal')
+        self.panes.pack(fill='both', expand=True, padx=16)
+        self.monitor_pane = ttk.Frame(self.panes, width=1, height=1)
+        self.reference_pane = ttk.Frame(self.panes, width=560, height=1)
+        self.panes.add(self.monitor_pane, weight=3)
+        self.panes.add(self.reference_pane, weight=2)
+        ttk.Label(self.reference_pane, text='Observer labels become available once the badges connect.\n'
+                  'Prediction charts are hidden while the observer panel is open.', padding=24).pack(anchor='w')
+        self.table = ttk.Treeview(self.monitor_pane, columns=COLUMNS, show='headings', height=3)
+        for name, label, width in zip(COLUMNS, ['Badge', 'Device', 'Acquired Hz', 'Received', 'Seq gaps', 'New drops', 'Candidate', 'Model'],
                                        [90, 170, 95, 100, 80, 100, 100, 130]):
             self.table.heading(name, text=label)
             self.table.column(name, width=width, stretch=True)
         self.table.pack(fill='x', pady=(8, 6))
-        plot_controls = ttk.Frame(self.monitor_tab)
+        plot_controls = ttk.Frame(self.monitor_pane)
         plot_controls.pack(fill='x', pady=4)
         ttk.Label(plot_controls, text='Visible seconds').pack(side='left')
         ttk.Combobox(plot_controls, textvariable=self.window, values=['10', '20', '30', '60'], width=5, state='readonly').pack(side='left', padx=(5, 14))
         ttk.Label(plot_controls, text='Plot refresh (Hz)').pack(side='left')
         ttk.Combobox(plot_controls, textvariable=self.refresh, values=['1', '2', '5', '10'], width=5, state='readonly').pack(side='left', padx=5)
         ttk.Label(plot_controls, text='Settings above apply at the next recording.').pack(side='right')
-        selectors = ttk.Frame(self.monitor_tab)
+        selectors = ttk.Frame(self.monitor_pane)
         selectors.pack(fill='x')
-        self.plot_vars = {}
+        self.plot_vars, self.plot_checks = {}, {}
         for i, (field, title, _, default) in enumerate(PLOTS):
             variable = tk.BooleanVar(value=default)
             self.plot_vars[field] = variable
-            ttk.Checkbutton(selectors, text=title, variable=variable, command=self.rebuild_plots).grid(row=i // 4, column=i % 4, sticky='w', padx=(0, 14))
-        plot_area = ttk.Frame(self.monitor_tab, width=1, height=1)
+            self.plot_checks[field] = ttk.Checkbutton(selectors, text=title, variable=variable, command=self.rebuild_plots)
+            self.plot_checks[field].grid(row=i // 4, column=i % 4, sticky='w', padx=(0, 14))
+        plot_area = ttk.Frame(self.monitor_pane, width=1, height=1)
         plot_area.pack(fill='both', expand=True, pady=8)
         plot_area.pack_propagate(False)
         self.figure = Figure(figsize=(10, 5), dpi=100, constrained_layout=True)
@@ -194,12 +197,15 @@ class SpeakerViewer:
     def rebuild_plots(self) -> None:
         self.figure.clear()
         self.axes = {}
-        selected = [plot for plot in PLOTS if self.plot_vars[plot[0]].get()]
+        selected = [plot for plot in PLOTS if self.plot_vars[plot[0]].get()
+                    and not (self.annotating and plot[0] in PREDICTIONS)]
+        columns = 1 if len(selected) <= 3 else 2
         for index, (field, title, unit, _) in enumerate(selected, 1):
-            axis = self.figure.add_subplot(math.ceil(len(selected) / 2), 2 if len(selected) > 1 else 1, index)
+            axis = self.figure.add_subplot(math.ceil(len(selected) / columns), columns, index)
             axis.set_title(title, loc='left', fontsize=10)
             axis.set_ylabel(unit, fontsize=9)
-            axis.set_xlabel('Acquisition time (seconds from latest)', fontsize=9)
+            if index > len(selected) - columns:
+                axis.set_xlabel('Acquisition time (seconds from latest)', fontsize=9)
             axis.grid(True, alpha=.2)
             self.axes[field] = axis
         if not selected:
@@ -276,27 +282,36 @@ class SpeakerViewer:
         self.device_list.configure(state='disabled' if running else 'normal')
         self.merge_button.configure(state='disabled' if running else 'normal')
 
+    def set_annotating(self, active: bool) -> None:
+        # Keep observer labels independent of the predictions they will be used to evaluate.
+        self.annotating = active
+        self.table.configure(displaycolumns=[c for c in COLUMNS if c not in ['candidate', 'model']] if active else '#all')
+        for field in PREDICTIONS:
+            self.plot_checks[field].configure(state='disabled' if active else 'normal')
+        self.rebuild_plots()
+        self.draw()
+
     def create_observer(self, badges: list[str]) -> None:
-        for child in self.reference_tab.winfo_children():
+        for child in self.reference_pane.winfo_children():
             child.destroy()
         mapping = ', '.join(f'{badge}: {self.badge_devices.get(badge, badge)}' for badge in badges)
-        scroll = ttk.Scrollbar(self.reference_tab, orient='vertical')
+        scroll = ttk.Scrollbar(self.reference_pane, orient='vertical')
         scroll.pack(side='right', fill='y')
-        canvas = tk.Canvas(self.reference_tab, highlightthickness=0, yscrollcommand=scroll.set)
+        canvas = tk.Canvas(self.reference_pane, highlightthickness=0, yscrollcommand=scroll.set)
         canvas.pack(fill='both', expand=True)
         scroll.configure(command=canvas.yview)
         content = ttk.Frame(canvas)
         window = canvas.create_window(0, 0, window=content, anchor='nw')
         content.bind('<Configure>', lambda _: canvas.configure(scrollregion=canvas.bbox('all')))
         canvas.bind('<Configure>', lambda event: canvas.itemconfigure(window, width=event.width))
-        ttk.Label(content, text=mapping, wraplength=1000, padding=(24, 12)).pack(anchor='w')
+        ttk.Label(content, text=mapping, wraplength=480, padding=(16, 12)).pack(anchor='w')
         self.observer = ObserverPanel(self.root, self.session_dir / 'reference.csv', self.session.get().strip(), badges,
-                                      container=content)
-        self.tab_changed()
+                                      container=content, on_close=self.observer_closed)
+        self.set_annotating(True)
 
-    def tab_changed(self) -> None:
-        if self.observer and not self.observer.closed:
-            self.observer.set_active(self.tabs.select() == str(self.reference_tab))
+    def observer_closed(self) -> None:
+        if not self.destroyed:
+            self.set_annotating(False)
 
     def poll(self) -> None:
         if self.destroyed:
@@ -348,7 +363,7 @@ class SpeakerViewer:
         self.update_table()
         if self.preview_skips and self.running:
             self.saved.set(f'Preview skipped {self.preview_skips} batches. CSV recording continues independently.')
-        if self.tabs.select() == str(self.monitor_tab) and time.monotonic() - self.last_draw >= 1 / int(self.refresh.get()):
+        if time.monotonic() - self.last_draw >= 1 / int(self.refresh.get()):
             self.draw()
             self.last_draw = time.monotonic()
         self.poll_timer = self.root.after(50, self.poll)
@@ -399,7 +414,7 @@ class SpeakerViewer:
             axis.autoscale_view(scalex=False)
             if field in ['candidate', 'model_score']:
                 axis.set_ylim(-.1, 1.1)
-            if axis.lines:
+            if axis.lines and field == next(iter(self.axes)):
                 axis.legend(loc='upper right', fontsize=8)
             if field == 'model_score' and not has_model_score:
                 axis.text(.5, .5, 'No hybrid model prediction available', transform=axis.transAxes, ha='center', fontsize=9)
@@ -466,9 +481,9 @@ class SpeakerViewer:
             self.closing = True
             self.toggle_capture()
             return
+        self.destroyed = True
         if self.observer and not self.observer.closed:
             self.observer.close()
-        self.destroyed = True
         self.root.after_cancel(self.poll_timer)
         self.root.destroy()
 

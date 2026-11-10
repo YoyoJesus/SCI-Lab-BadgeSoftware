@@ -32,16 +32,16 @@ def test_plot_history_is_bounded_and_uses_acquisition_time():
 def test_embedded_observer_closes_without_destroying_viewer(tmp_path, tk_window):
     root = tk_window
     host = ttk.Frame(root)
-    panel = ObserverPanel(root, tmp_path / 'reference.csv', 'demo', ['a'], container=host)
+    closed = []
+    panel = ObserverPanel(root, tmp_path / 'reference.csv', 'demo', ['a'], container=host, on_close=lambda: closed.append(True))
     try:
-        panel.set_active(True)
         panel.start()
         panel.toggle('a')
         assert panel.recorder.states['a'] == 'active'
-        panel.set_active(False)
+        panel.pause()
         assert panel.recorder.states['a'] == 'unknown'
-        assert panel.paused
         panel.close()
+        assert closed == [True]
         assert root.winfo_exists()
     finally:
         if not panel.closed:
@@ -49,22 +49,40 @@ def test_embedded_observer_closes_without_destroying_viewer(tmp_path, tk_window)
         root.destroy()
 
 
-def test_viewer_demo_keeps_predictions_out_of_observer_tab(tmp_path, tk_window):
+def test_observer_checkpoints_faster_than_one_second(tmp_path, tk_window):
+    import time
+    import pandas as pd
+    from observer import CHECKPOINT_MS
+    assert CHECKPOINT_MS < 1000
+    root = tk_window
+    panel = ObserverPanel(root, tmp_path / 'reference.csv', 'demo', ['a'], container=ttk.Frame(root))
+    try:
+        panel.start()
+        rows_after_start = len(pd.read_csv(tmp_path / 'reference.csv'))
+        deadline = time.monotonic() + .9
+        while time.monotonic() < deadline:
+            root.update()
+            time.sleep(.01)
+        assert len(pd.read_csv(tmp_path / 'reference.csv')) > rows_after_start
+    finally:
+        panel.close()
+        root.destroy()
+
+
+def test_viewer_shows_sensor_data_beside_observer_but_hides_predictions(tmp_path, tk_window):
     root = tk_window
     viewer = SpeakerViewer(root, demo=True, output_root=tmp_path)
     try:
         root.update_idletasks()
         assert set(viewer.history.rows) == {'badge_01', 'badge_02', 'badge_03'}
-        viewer.tabs.select(viewer.reference_tab)
-        viewer.tab_changed()
-        assert viewer.observer.enabled
+        assert {'Sound_Level', 'Acceleration'} <= set(viewer.axes)
+        assert not set(viewer.axes) & {'speech_score', 'candidate', 'model_score'}
+        assert 'candidate' not in viewer.table['displaycolumns']
         viewer.observer.start()
         viewer.observer.toggle('badge_01')
-        viewer.tabs.select(viewer.monitor_tab)
-        viewer.tab_changed()
-        assert viewer.observer.paused
-        assert not viewer.observer.enabled
-        assert set(viewer.observer.recorder.states.values()) == {'unknown'}
+        assert viewer.observer.recorder.states['badge_01'] == 'active'
+        viewer.observer.close()
+        assert {'speech_score', 'candidate'} <= set(viewer.axes)
     finally:
         viewer.close()
 
