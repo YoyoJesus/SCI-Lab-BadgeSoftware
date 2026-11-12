@@ -458,6 +458,11 @@ def main() -> None:
     merger.add_argument('--offset-ms', type=float, default=0)
     merger.add_argument('--onset-ms', type=float, default=0,
                         help='Mark this much time before each speaking start as unknown')
+    combiner = commands.add_parser('combine', help='Keep only labels two observers agree on, and report agreement')
+    combiner.add_argument('first')
+    combiner.add_argument('second')
+    combiner.add_argument('--output', required=True)
+    combiner.add_argument('--report', help='Also write observer agreement as JSON')
     evaluation = commands.add_parser('evaluate', help='Compare predictions against human reference only')
     evaluation.add_argument('csv')
     evaluation.add_argument('--prediction', choices=['candidate', 'paper_candidate'], default='candidate')
@@ -486,6 +491,18 @@ def main() -> None:
             target.parent.mkdir(parents=True, exist_ok=True)
             merged.to_csv(target, mode='x', index=False)
             print(f'Wrote {target}: {merged.activity_label.value_counts().to_dict()}')
+        elif args.command == 'combine':
+            from ground_truth import combine_references, observer_agreement
+            first, second = pd.read_csv(args.first), pd.read_csv(args.second)
+            combined = combine_references(first, second)
+            target = Path(args.output)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            combined.to_csv(target, mode='x', index=False)
+            agreement = observer_agreement(first, second)
+            if args.report:
+                with Path(args.report).open('x', encoding='utf-8') as handle:
+                    json.dump(agreement, handle, indent=2)
+            print(f'Wrote {target}. Observer agreement: {json.dumps(agreement, indent=2)}')
         elif args.command == 'evaluate':
             from ground_truth import evaluate_reference
             report = evaluate_reference(pd.read_csv(args.csv), args.prediction)

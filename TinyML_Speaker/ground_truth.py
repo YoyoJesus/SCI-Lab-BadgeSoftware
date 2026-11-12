@@ -11,6 +11,7 @@ import pandas as pd
 
 LABELS = {'active', 'not_active', 'unknown'}
 INTERVAL_FIELDS = ['Recording_ID', 'Badge_Name', 'Start', 'End', 'activity_label']
+SECOND_OBSERVER_FILE = 'reference_observer2.csv'
 
 
 class IntervalRecorder:
@@ -152,3 +153,116 @@ def evaluate_reference(frame: pd.DataFrame, prediction: str = 'candidate') -> di
             'recall': ratio(tp, tp + fn), 'specificity': ratio(tn, tn + fp),
             'f1': ratio(2 * tp, 2 * tp + fp + fn), 'accuracy': ratio(tp + tn, int(known.sum())),
             'note': 'Sample-level observer-reference agreement. Temporally related rows are not independent trials.'}
+
+
+def _observer_spans(intervals: pd.DataFrame) -> dict[tuple[str, str], list[tuple[pd.Timestamp, pd.Timestamp, str]]]:
+    if not set(INTERVAL_FIELDS) <= set(intervals):
+        raise ValueError('Missing interval columns')
+    if not set(intervals.activity_label) <= LABELS:
+        raise ValueError('Unknown interval label; use active, not_active, or unknown')
+    spans: dict[tuple[str, str], list[tuple[pd.Timestamp, pd.Timestamp, str]]] = {}
+    table = intervals.assign(Start=pd.to_datetime(intervals.Start, utc=True, format='ISO8601'),
+                             End=pd.to_datetime(intervals.End, utc=True, format='ISO8601'))
+    for (recording, badge), group in table.groupby(['Recording_ID', 'Badge_Name']):
+        rows = sorted(zip(group.Start, group.End, group.activity_label))
+        for (_, end, _), (start, _, _) in zip(rows, rows[1:]):
+            if start < end:
+                raise ValueError('Annotation intervals overlap for one badge')
+        spans[(str(recording), str(badge))] = rows
+    return spans
+
+
+def _label_at(rows: list[tuple[pd.Timestamp, pd.Timestamp, str]], time: pd.Timestamp) -> str:
+    for start, end, label in rows:
+        if start <= time < end:
+            return label
+    return 'unknown'
+
+
+def _paired_segments(first: pd.DataFrame, second: pd.DataFrame):
+    """Split both observers' intervals at every boundary and pair their labels per segment."""
+    a, b = _observer_spans(first), _observer_spans(second)
+    for key in sorted(set(a) | set(b)):
+        rows_a, rows_b = a.get(key, []), b.get(key, [])
+        edges = sorted({t for start, end, _ in rows_a + rows_b for t in (start, end)})
+        for start, end in zip(edges, edges[1:]):
+            yield key, start, end, _label_at(rows_a, start), _label_at(rows_b, start)
+
+
+def combine_references(first: pd.DataFrame, second: pd.DataFrame) -> pd.DataFrame:
+    """Keep a label only where both observers gave the same known label; everything else is unknown."""
+    merged: list[list] = []
+    for (recording, badge), start, end, label_a, label_b in _paired_segments(first, second):
+        label = label_a if label_a == label_b else 'unknown'
+        if merged and merged[-1][:2] == [recording, badge] and merged[-1][3] == start and merged[-1][4] == label:
+            merged[-1][3] = end
+        else:
+            merged.append([recording, badge, start, end, label])
+    frame = pd.DataFrame(merged, columns=INTERVAL_FIELDS)
+    for name in ['Start', 'End']:
+        frame[name] = frame[name].map(lambda value: value.isoformat())
+    return frame
+
+
+def _active_edges(rows: list[tuple[pd.Timestamp, pd.Timestamp, str]]) -> tuple[list, list]:
+    onsets, offsets = [], []
+    previous_end, previous_label = None, None
+    for start, end, label in rows:
+        joined = previous_end == start and previous_label == label
+        if label == 'active' and not joined:
+            onsets.append(start)
+        if previous_label == 'active' and not joined:
+            offsets.append(previous_end)
+        previous_end, previous_label = end, label
+    if previous_label == 'active':
+        offsets.append(previous_end)
+    return onsets, offsets
+
+
+def observer_agreement(first: pd.DataFrame, second: pd.DataFrame, match_seconds: float = 3) -> dict:
+    """Time-weighted agreement between two observers, plus how far apart their speaking edges are.
+
+    Gaps are second observer minus first observer; positive means the second observer pressed later.
+    """
+    both = agree = active_a = active_b = 0.0
+    for _, start, end, label_a, label_b in _paired_segments(first, second):
+        if 'unknown' in (label_a, label_b):
+            continue
+        seconds = (end - start).total_seconds()
+        both += seconds
+        agree += seconds * (label_a == label_b)
+        active_a += seconds * (label_a == 'active')
+        active_b += seconds * (label_b == 'active')
+    a, b = _observer_spans(first), _observer_spans(second)
+    gaps: dict[str, list[float]] = {'onset': [], 'offset': []}
+    total_onsets = 0
+    for key in set(a) & set(b):
+        edges_a, edges_b = _active_edges(a[key]), _active_edges(b[key])
+        total_onsets += len(edges_a[0])
+        for kind, mine, theirs in [('onset', edges_a[0], edges_b[0]), ('offset', edges_a[1], edges_b[1])]:
+            for time in mine:
+                nearest = min(theirs, key=lambda other: abs((other - time).total_seconds()), default=None)
+                if nearest is not None and abs((nearest - time).total_seconds()) <= match_seconds:
+                    gaps[kind].append((nearest - time).total_seconds() * 1000)
+    observed = agree / both if both else None
+    chance = ((active_a * active_b + (both - active_a) * (both - active_b)) / both ** 2) if both else None
+    kappa = (observed - chance) / (1 - chance) if both and chance < 1 else None
+
+    def median(values: list[float]) -> Optional[float]:
+        return float(np.median(values)) if values else None
+
+    return {'both_labeled_seconds': both, 'agreement': observed, 'cohen_kappa': kappa,
+            'first_observer_onsets': total_onsets, 'onsets_matched': len(gaps['onset']),
+            'median_onset_gap_ms': median(gaps['onset']),
+            'median_abs_onset_gap_ms': median([abs(g) for g in gaps['onset']]),
+            'median_offset_gap_ms': median(gaps['offset']),
+            'median_abs_offset_gap_ms': median([abs(g) for g in gaps['offset']]),
+            'note': 'Time-weighted over periods both observers labeled. Gaps are second minus first observer, '
+                    f'matched within {match_seconds:g} s.'}
+
+
+def session_reference(first: pd.DataFrame, second: Optional[pd.DataFrame]) -> tuple[pd.DataFrame, Optional[dict]]:
+    """Use the consensus of both observers when the second one labeled anything; otherwise the first alone."""
+    if second is None or not second.activity_label.isin(['active', 'not_active']).any():
+        return first, None
+    return combine_references(first, second), observer_agreement(first, second)
