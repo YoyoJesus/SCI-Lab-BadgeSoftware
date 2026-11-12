@@ -3,6 +3,7 @@ import argparse
 import asyncio
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
+import json
 import math
 import os
 from pathlib import Path
@@ -20,9 +21,10 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import pandas as pd
 
-from ground_truth import merge_annotations
+from ground_truth import SECOND_OBSERVER_FILE, merge_annotations, session_reference
 from observer import ObserverPanel
 from pipeline import ROOT, SERVICE, receive
+from remote_observer import RemoteObserver
 from review import Recording, percent, plot_columns
 
 PLOTS = [
@@ -102,6 +104,7 @@ class SpeakerViewer:
         self.samples: queue.Queue = queue.Queue(maxsize=2000)
         self.stop_event = threading.Event()
         self.observer = None
+        self.remote: Optional[RemoteObserver] = None
         self.session_dir = self.raw_path = None
         self.devices: list[str] = []
         self.badge_devices: dict[str, str] = {}
@@ -360,7 +363,25 @@ class SpeakerViewer:
         self.write_people()
         self.observer = ObserverPanel(self.root, self.session_dir / 'reference.csv', self.session.get().strip(), badges,
                                       container=content, on_close=self.observer_closed)
+        if not self.demo:
+            self.start_remote(content, badges)
         self.set_annotating(True)
+
+    def start_remote(self, content: ttk.Frame, badges: list[str]) -> None:
+        box = ttk.Frame(content, padding=(12, 8, 12, 0))
+        box.pack(fill='x', before=self.observer.body)
+        ttk.Label(box, text='Second observer', font=('Segoe UI', 11, 'bold')).pack(anchor='w')
+        try:
+            self.remote = RemoteObserver(self.session_dir / SECOND_OBSERVER_FILE, self.session.get().strip(), badges)
+        except OSError as error:
+            ttk.Label(box, text=f'Unavailable: {error}', wraplength=360).pack(anchor='w')
+            return
+        link = ttk.Entry(box)
+        link.insert(0, self.remote.url)
+        link.configure(state='readonly')
+        link.pack(fill='x', pady=(2, 2))
+        ttk.Label(box, wraplength=360, text='Open this link in a browser on a phone or another computer on the same network. They label every '
+                  'badge independently; merging keeps only the labels both observers agree on.').pack(anchor='w')
 
     def write_people(self) -> None:
         # Names stay out of every CSV; this file is the only place the wearer mapping is saved.
@@ -380,6 +401,9 @@ class SpeakerViewer:
             self.status.set(f'Could not save participants.md: {error}')
 
     def observer_closed(self) -> None:
+        if self.remote:
+            self.remote.close()
+            self.remote = None
         if not self.destroyed:
             self.set_annotating(False)
 
@@ -603,10 +627,18 @@ class SpeakerViewer:
             import pandas as pd
             temporary = session_dir / f'.training-{time.time_ns()}.csv'
             try:
-                frame = merge_annotations(pd.read_csv(raw_path), pd.read_csv(session_dir / 'reference.csv'), boundary_ms=200)
+                second_path = session_dir / SECOND_OBSERVER_FILE
+                labels, agreement = session_reference(pd.read_csv(session_dir / 'reference.csv'),
+                                                      pd.read_csv(second_path) if second_path.exists() else None)
+                note = ''
+                if agreement:
+                    (session_dir / 'observer_agreement.json').write_text(json.dumps(agreement, indent=2), encoding='utf-8')
+                    labels.to_csv(session_dir / 'reference_consensus.csv', index=False)
+                    note = f' Observers agreed on {percent(agreement["agreement"])} of jointly labeled time.'
+                frame = merge_annotations(pd.read_csv(raw_path), labels, boundary_ms=200)
                 frame.to_csv(temporary, mode='x', index=False)
                 temporary.rename(target)
-                self.emit('merge_result', {'message': f'Wrote training.csv: {frame.activity_label.value_counts().to_dict()}'})
+                self.emit('merge_result', {'message': f'Wrote training.csv: {frame.activity_label.value_counts().to_dict()}.{note}'})
             except Exception as error:
                 self.emit('merge_result', {'message': f'Merge failed: {error}'})
             finally:
