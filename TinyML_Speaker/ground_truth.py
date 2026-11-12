@@ -56,12 +56,17 @@ class IntervalRecorder:
 
 
 def merge_annotations(samples: pd.DataFrame, intervals: pd.DataFrame,
-                      boundary_ms: float = 0, offset_ms: float = 0) -> pd.DataFrame:
+                      boundary_ms: float = 0, offset_ms: float = 0, onset_ms: float = 0) -> pd.DataFrame:
+    """Label samples from observer intervals.
+
+    onset_ms marks the time just before each active interval as unknown, since observers
+    tend to press the speaking key after speech has already started.
+    """
     required = {'Recording_ID', 'Badge_Name', 'Timestamp'}
     if not required <= set(samples) or not set(INTERVAL_FIELDS) <= set(intervals):
         raise ValueError('Missing badge sample or interval columns')
-    if not math.isfinite(boundary_ms) or boundary_ms < 0 or not math.isfinite(offset_ms):
-        raise ValueError('Boundary must be nonnegative; offsets must be finite')
+    if not all(math.isfinite(v) and v >= 0 for v in [boundary_ms, onset_ms]) or not math.isfinite(offset_ms):
+        raise ValueError('Boundary and onset margins must be nonnegative; offsets must be finite')
     result = samples.copy().reset_index(drop=True)
     intervals = intervals.copy()
     for table in [result, intervals]:
@@ -113,6 +118,12 @@ def merge_annotations(samples: pd.DataFrame, intervals: pd.DataFrame,
         safe = np.maximum(indexes, 0)
         valid &= times.astype('int64').to_numpy() < ends[safe]
         result.loc[positions[valid], 'activity_label'] = labels[safe[valid]]
+        if onset_ms:
+            onset = pd.Timedelta(milliseconds=onset_ms)
+            for start, _, label in combined:
+                if label == 'active':
+                    late = (times >= start - onset) & (times < start)
+                    result.loc[positions[late.to_numpy()], 'activity_label'] = 'unknown'
     return result
 
 

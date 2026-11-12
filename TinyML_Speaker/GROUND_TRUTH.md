@@ -85,7 +85,20 @@ does not correct observer reaction time or BLE latency. Configure it explicitly:
 negative shifts them earlier. Choose offsets using a separate synchronization
 exercise, not by maximizing model agreement. Do not use a boundary margin so
 large that it removes the short turns you need to evaluate. Device timestamps
-are retained. V2 capture reconstructs acquisition-time `Timestamp` from a PC
+are retained.
+
+Observers often press the speaking key after the wearer has already started
+talking, while the end of a turn is marked more promptly. `--onset-ms` marks
+that much time before each speaking interval as `unknown` instead of
+`not_active`, without moving the interval ends:
+
+```powershell
+.\run.bat merge $raw.FullName outputs/session_01_reference.csv --onset-ms 1500 --output data/session_01_onset.csv
+```
+
+Measure your own delay with a separate exercise, such as marking a series of
+claps on cue, and use that value rather than tuning it against detector
+agreement. The default is 0. V2 capture reconstructs acquisition-time `Timestamp` from a PC
 clock anchor and keeps bulk arrival time separately. Alignment uses this
 acquisition estimate and observer UTC time; one-way clock-command delay, drift,
 and human reaction time remain limitations. Legacy firmware uses arrival time

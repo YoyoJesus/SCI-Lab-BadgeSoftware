@@ -46,6 +46,19 @@ def test_boundary_guard_excludes_transition_uncertainty():
     assert list(merged.activity_label) == ['unknown', 'unknown', 'active', 'unknown', 'unknown']
 
 
+def test_onset_guard_excludes_late_speaking_presses_only():
+    samples = pd.DataFrame({'Timestamp': [START + timedelta(seconds=s) for s in [0, 1.9, 2.5, 3, 4, 5, 5.5]],
+                            'Badge_Name': ['a'] * 7, 'Recording_ID': ['s'] * 7})
+    intervals = pd.DataFrame([dict(Recording_ID='s', Badge_Name='a', Start=START + timedelta(seconds=start),
+                                   End=START + timedelta(seconds=end), activity_label=label)
+                              for start, end, label in [(0, 3, 'not_active'), (3, 5, 'active'), (5, 6, 'not_active')]])
+    merged = merge_annotations(samples, intervals, onset_ms=1000)
+    assert list(merged.activity_label) == ['not_active', 'not_active', 'unknown', 'active', 'active',
+                                           'not_active', 'not_active']
+    with pytest.raises(ValueError, match='nonnegative'):
+        merge_annotations(samples, intervals, onset_ms=-1)
+
+
 def test_merge_rejects_naive_timestamps_and_handles_mixed_iso_precision():
     intervals = pd.DataFrame([dict(Recording_ID='s', Badge_Name='a', Start=START,
                                    End=START + timedelta(seconds=2), activity_label='active')])

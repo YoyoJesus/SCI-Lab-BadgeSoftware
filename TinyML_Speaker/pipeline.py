@@ -456,6 +456,8 @@ def main() -> None:
     merger.add_argument('--output', required=True)
     merger.add_argument('--boundary-ms', type=float, default=200)
     merger.add_argument('--offset-ms', type=float, default=0)
+    merger.add_argument('--onset-ms', type=float, default=0,
+                        help='Mark this much time before each speaking start as unknown')
     evaluation = commands.add_parser('evaluate', help='Compare predictions against human reference only')
     evaluation.add_argument('csv')
     evaluation.add_argument('--prediction', choices=['candidate', 'paper_candidate'], default='candidate')
@@ -478,7 +480,8 @@ def main() -> None:
             launch(Path(args.output) if args.output else ROOT / f'outputs/{stamp}_reference.csv', args.recording_id, args.badges)
         elif args.command == 'merge':
             from ground_truth import merge_annotations
-            merged = merge_annotations(pd.read_csv(args.csv), pd.read_csv(args.intervals), args.boundary_ms, args.offset_ms)
+            merged = merge_annotations(pd.read_csv(args.csv), pd.read_csv(args.intervals), args.boundary_ms, args.offset_ms,
+                                       args.onset_ms)
             target = Path(args.output)
             target.parent.mkdir(parents=True, exist_ok=True)
             merged.to_csv(target, mode='x', index=False)
