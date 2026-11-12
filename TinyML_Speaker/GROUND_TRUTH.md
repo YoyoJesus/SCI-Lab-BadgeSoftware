@@ -15,7 +15,9 @@ From `TinyML_Speaker`, first start the receiver:
 ```
 
 Note which wearer corresponds to each `badge_01`, `badge_02`, etc. printed by
-the receiver. These assignments can change on the next run. In a second terminal:
+the receiver. These assignments can change on the next run. The viewer records
+this mapping in `participants.md` for you (see [VIEWER.md](VIEWER.md)). In a
+second terminal:
 
 ```powershell
 .\run.bat annotate --badges badge_01 badge_02 --recording-id session_01 --output outputs/session_01_reference.csv

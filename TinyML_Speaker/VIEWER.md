@@ -70,6 +70,14 @@ the standalone panel: 1–9 toggle speakers, 0 marks observed silence, and Space
 pauses. Leaving the window pauses annotation and keeps that time unknown.
 Finishing annotations does not stop badge capture.
 
+Above the observer controls, type who is wearing each badge. The names are
+saved only to `participants.md` in the session folder, as a badge, device, and
+person table, and are rewritten on every edit. They never go into the raw CSV,
+`reference.csv`, or `training.csv`, whose `Person_Name` column stays empty.
+Names carry over to the next recording in the same viewer window. Keep
+`participants.md` with the session folder; like the rest of `outputs/`, git
+ignores it.
+
 Labels are saved to `reference.csv` in the same session folder. Each change is
 written immediately, and the current interval is checkpointed every 0.2 seconds.
 A failed annotation save stops the observer panel without closing the live viewer.

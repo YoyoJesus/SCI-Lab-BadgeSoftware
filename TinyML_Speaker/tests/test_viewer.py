@@ -163,3 +163,22 @@ def test_viewer_lists_link_state_for_every_selected_badge(tmp_path, tk_window):
         assert app.observer.badges == ['badge_01', 'badge_03']
     finally:
         app.close()
+
+
+def test_wearer_names_go_to_participants_md_not_reference_csv(tmp_path, tk_window):
+    import tkinter as tk
+    viewer = SpeakerViewer(tk_window, demo=True, output_root=tmp_path)
+    try:
+        assert not (viewer.session_dir / 'participants.md').exists()
+        viewer.people['badge_01'].set('Test | Person')
+        text = (viewer.session_dir / 'participants.md').read_text(encoding='utf-8')
+        assert '| badge_01 | demo-device-01 | Test / Person |' in text
+        assert '| badge_02 | demo-device-02 |  |' in text
+        viewer.observer.start()
+        entry = tk.Entry(tk_window)
+        viewer.observer.key_down(type('Event', (), {'widget': entry, 'keysym': '1'})())
+        assert viewer.observer.recorder.states['badge_01'] == 'not_active'
+        viewer.observer.close()
+        assert 'Test' not in (viewer.session_dir / 'reference.csv').read_text(encoding='utf-8')
+    finally:
+        viewer.close()

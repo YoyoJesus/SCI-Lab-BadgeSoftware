@@ -105,6 +105,8 @@ class SpeakerViewer:
         self.session_dir = self.raw_path = None
         self.devices: list[str] = []
         self.badge_devices: dict[str, str] = {}
+        self.people: dict[str, tk.StringVar] = {}
+        self.people_badges: list[str] = []
         self.links: dict[str, str] = {}
         self.review: Optional[Recording] = None
         self.review_end = tk.DoubleVar(value=0)
@@ -333,7 +335,6 @@ class SpeakerViewer:
     def create_observer(self, badges: list[str]) -> None:
         for child in self.reference_pane.winfo_children():
             child.destroy()
-        mapping = ', '.join(f'{badge}: {self.badge_devices.get(badge, badge)}' for badge in badges)
         scroll = ttk.Scrollbar(self.reference_pane, orient='vertical')
         scroll.pack(side='right', fill='y')
         canvas = tk.Canvas(self.reference_pane, highlightthickness=0, yscrollcommand=scroll.set)
@@ -343,10 +344,40 @@ class SpeakerViewer:
         window = canvas.create_window(0, 0, window=content, anchor='nw')
         content.bind('<Configure>', lambda _: canvas.configure(scrollregion=canvas.bbox('all')))
         canvas.bind('<Configure>', lambda event: canvas.itemconfigure(window, width=event.width))
-        ttk.Label(content, text=mapping, wraplength=360, padding=(12, 8, 12, 0)).pack(anchor='w')
+        people = ttk.Frame(content, padding=(12, 8, 12, 0))
+        people.pack(fill='x')
+        ttk.Label(people, text='Who wears each badge (saved to participants.md only)', wraplength=360).grid(
+            row=0, column=0, columnspan=3, sticky='w', pady=(0, 4))
+        self.people_badges = badges
+        for row, badge in enumerate(badges, 1):
+            if badge not in self.people:
+                self.people[badge] = tk.StringVar()
+                self.people[badge].trace_add('write', lambda *_: self.write_people())
+            ttk.Label(people, text=badge).grid(row=row, column=0, sticky='w', padx=(0, 8))
+            ttk.Label(people, text=self.badge_devices.get(badge, ''), foreground='#666').grid(row=row, column=1, sticky='w', padx=(0, 8))
+            ttk.Entry(people, textvariable=self.people[badge], width=18).grid(row=row, column=2, sticky='ew', pady=1)
+        people.columnconfigure(2, weight=1)
+        self.write_people()
         self.observer = ObserverPanel(self.root, self.session_dir / 'reference.csv', self.session.get().strip(), badges,
                                       container=content, on_close=self.observer_closed)
         self.set_annotating(True)
+
+    def write_people(self) -> None:
+        # Names stay out of every CSV; this file is the only place the wearer mapping is saved.
+        names = {badge: self.people[badge].get().strip() for badge in self.people_badges}
+        if not self.session_dir or not any(names.values()):
+            return
+        lines = [f'# Participants: {self.session.get().strip()}', '',
+                 'Badge to person mapping for this session. Not stored in the CSV files.', '',
+                 '| Badge | Device | Person |', '| --- | --- | --- |']
+        for badge, name in names.items():
+            cells = [badge, self.badge_devices.get(badge, ''), name]
+            lines.append('| ' + ' | '.join(c.replace('|', '/') for c in cells) + ' |')
+        try:
+            self.session_dir.mkdir(parents=True, exist_ok=True)
+            (self.session_dir / 'participants.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        except OSError as error:
+            self.status.set(f'Could not save participants.md: {error}')
 
     def observer_closed(self) -> None:
         if not self.destroyed:
