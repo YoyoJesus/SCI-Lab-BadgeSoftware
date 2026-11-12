@@ -46,7 +46,8 @@ use it as the badge ID in every session. Label each physical badge to match.
 Without `-Name`, the badge advertises the shared default name and the PC numbers
 it by scan order, which can change between runs. Re-uploading, including after
 training a model, needs the same `-Name` again. The sketch boots without USB connected.
-The LED follows its local candidate flag. Rapid blinking at startup indicates
+The LED turns on after about 1 s of local speech (two 500 ms bins with at least
+half their samples flagged), so it trails speech by 1 to 1.5 s. Rapid blinking at startup indicates
 IMU/BLE failure; slower blinking indicates microphone initialization failure.
 
 ## Collect using the paper rule first
@@ -186,7 +187,9 @@ They can exercise the causal paper-rule adaptation:
 See [design](DESIGN.md) and the [paper](../paper/manuscript.md), section 3.2.
 Local rules preserve the 1 s/60 s windows, 0.45 sound quantile, quartile
 normalization, acceleration weight 1.2, acceleration clip 2.5, eligibility floor
-0.75, and high-score fallback 3.5. Acceleration is the sum of absolute axis
+0.75, and high-score fallback 3.5. One addition: a sample only counts when its
+sound is at least 8x the rolling quiet level (the sound Q25), because the
+relative rule alone flagged about a third of samples in a silent room. Acceleration is the sum of absolute axis
 changes in g. Audio power uses a wide accumulator instead of reproducing the
 legacy overflow. It is not the RMS output of the newer full-sensor firmware.
 Historical thresholds may therefore need validation on these readings.
@@ -196,10 +199,12 @@ Differences from the offline algorithm:
 - A 10 Hz, 600-reading history approximates time-based rolling windows. Startup
   waits for ten readings instead of using future whole-recording quartiles.
   Gaps over 250 ms reset history. Sampling overruns are counted.
-- PC winner selection uses the highest eligible score in each 500 ms bin and
-  a centered five-bin vote requiring three wins. Available observed bins are
-  used, following the original implementation. Short-run suppression and gap
-  merging from the offline labeler are not applied.
+- PC winner selection counts a badge as speaking in a 500 ms bin when at least
+  half its samples are flagged, and only in runs of at least two bins (1 s).
+  The speaking badge with the highest flagged score wins the bin, then a
+  centered five-bin vote requires three wins. Available observed bins are used,
+  following the original implementation. The offline labeler's 2 s minimum and
+  gap merging are not applied.
 - V2 timestamps use the approximate PC/device anchor described above. Legacy
   firmware retains arrival-time timestamps, unsuitable for bulk alignment.
 - PC ranking still uses the paper score even in hybrid mode. This retains the

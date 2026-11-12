@@ -128,8 +128,31 @@ class MotionLag {
   float axes[32][3];
 };
 
+// The LED turns on after two consecutive 500 ms bins with at least half their samples flagged.
+struct SpeakingHold {
+  uint32_t bin = 0;
+  uint16_t flagged = 0, total = 0;
+  uint8_t run = 0;
+  bool started = false;
+  void reset() { started = false; flagged = total = run = 0; }
+  bool update(uint32_t time, bool candidate) {
+    uint32_t current = time / 500;
+    if (started && current != bin) {
+      bool speaking = 2 * flagged >= total;
+      run = speaking && current == bin + 1 ? (run < 2 ? run + 1 : 2) : 0;
+      flagged = total = 0;
+    }
+    bin = current;
+    started = true;
+    ++total;
+    if (candidate) ++flagged;
+    return run >= 2;
+  }
+};
+
 void processSamples() {
   MotionLag motion;
+  SpeakingHold hold;
   uint32_t lastSample = 0, lastBaseline = 0;
   bool haveSample = false, haveBaseline = false;
   while (true) {
@@ -140,7 +163,7 @@ void processSamples() {
       if (!rawQueue.peek(sample)) { processingIdle.store(true); break; }
       rawQueue.consume();
       if (haveSample && sample.time - lastSample > 250) {
-        detector.reset(); motion.reset(); haveBaseline = false;
+        detector.reset(); motion.reset(); hold.reset(); haveBaseline = false;
       }
       lastSample = sample.time;
       haveSample = true;
@@ -171,7 +194,7 @@ void processSamples() {
       for (int i = 0; i < 13; ++i) record.values[i] = isfinite(values[i]) ? values[i] : -1;
       record.flags = (detection.ready ? 1 : 0) | (detection.candidate ? 2 : 0) | (candidate ? 4 : 0);
       if (!outputQueue.push(record)) processingDrops.fetch_add(1);
-      digitalWrite(LED_BUILTIN, candidate);
+      digitalWrite(LED_BUILTIN, hold.update(sample.time, candidate));
       processingIdle.store(true);
     }
   }

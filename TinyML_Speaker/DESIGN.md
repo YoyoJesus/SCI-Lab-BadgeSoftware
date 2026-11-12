@@ -8,7 +8,8 @@ Source: ../paper/manuscript.md section 3.2 and
 ../Data Cleanup and Normalization/auto_label.py. Preserve the 1 s sound mean,
 60 s baseline, 0.45 presence quantile, quartile normalization with denominator
 floor 1, acceleration weight 1.2 clipped to [0, 2.5], score floor 0.75, and
-fallback 3.5. Acceleration is the sum of absolute axis changes in g, matching
+fallback 3.5, plus a loudness floor: sound must be at least 8x the rolling sound
+Q25. Acceleration is the sum of absolute axis changes in g, matching
 the legacy badge. Sound is mean-square microphone power divided by two,
 approximating the legacy full-block convention while avoiding its overflow.
 Numerical equivalence to historical sound data is not claimed.
@@ -19,10 +20,13 @@ A 600-observation history refreshed at about 10 Hz approximates time-based
 windows while sampling stays regular. Startup requires ten baseline readings;
 missing data resets history. No future samples are used for normalization.
 The badge sends a score and local candidate flag. Only the PC can compare badges.
-The receiver selects the highest eligible sample per 500 ms acquisition-time bin,
-then applies a centered five-bin vote requiring three wins. It writes labeled
-CSV for downstream feature extraction. Legacy run-length post-processing is
-not part of this streaming detector.
+The receiver marks a badge speaking in a 500 ms acquisition-time bin when at
+least half its samples are flagged and the run lasts at least two bins. The
+speaking badge with the highest flagged score wins the bin, then a centered
+five-bin vote requires three wins. It writes labeled CSV for downstream feature
+extraction. The badge LED applies the same half-bin rule causally and turns on
+after two consecutive speaking bins. The offline labeler's other run-length
+rules are not part of this streaming detector.
 
 High-priority acquisition fills a 128-sample SPSC queue; a separate processing
 thread updates the history at 10 Hz and evaluates every acquired sample using
