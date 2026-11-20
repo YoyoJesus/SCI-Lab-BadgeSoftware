@@ -182,6 +182,25 @@ They can exercise the causal paper-rule adaptation:
 .\run.bat replay "path/to/legacy.csv" --output outputs/replay.csv
 ```
 
+To explore shorter turns in a badge capture, replay its stored candidate flags
+with a lower sample fraction and a single-bin minimum:
+
+```powershell
+.\run.bat replay "path/to/session_raw.csv" --output outputs/replay_short_turns.csv --speaking-fraction 0.2 --min-speaking-bins 1 --no-centered-vote
+```
+
+These options only affect offline speaker assignment. By default replay still
+requires 50% of samples in a 500 ms bin, two speaking bins, and the centered
+five-bin vote.
+
+For a wearer-attribution check, pin one badge to each speaker's shirt and verify
+the badge-to-person mapping before labeling. Record each person speaking alone,
+both speaking together, and both moving without speaking. Include short turns
+and a seated speaker with little motion. Check `seq_gap` by badge before
+comparing `auto_activity_label` with the observer labels. Replay picks at most
+one speaker per bin, so report simultaneous speech separately. Use a separate
+shirt-pinned recording to verify settings chosen during calibration.
+
 ## Relationship to the paper
 
 See [design](DESIGN.md) and the [paper](../paper/manuscript.md), section 3.2.
