@@ -190,12 +190,12 @@ def train(args: argparse.Namespace) -> None:
     print('Exported model.h. Rebuild and upload firmware to activate hybrid detection.')
 
 
-def label_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    """Pick a speaker per 500 ms bin, then apply the paper's centered vote.
+def label_frame(frame: pd.DataFrame, *, speaking_fraction: float = SPEAKING_FRACTION,
+                min_speaking_bins: int = MIN_SPEAKING_BINS, centered_vote: bool = True) -> pd.DataFrame:
+    """Pick a speaker per 500 ms bin, optionally applying the paper's centered vote.
 
-    A badge is speaking in a bin when at least half its samples are flagged, and only in
-    runs of at least MIN_SPEAKING_BINS bins. The speaking badge with the highest flagged
-    score wins the bin.
+    A badge must meet the flagged sample fraction and minimum run length.
+    The eligible badge with the highest flagged score wins the bin.
     """
     import pandas as pd
     frame = frame.copy()
@@ -205,20 +205,22 @@ def label_frame(frame: pd.DataFrame) -> pd.DataFrame:
     per_bin = frame.assign(flagged=flagged, score=frame['speech_score'].where(flagged)).groupby(
         ['Badge_Name', 'time_bin']).agg(flagged=('flagged', 'mean'), score=('score', 'max'))
     bins = sorted(frame['time_bin'].unique())
-    speaking = (per_bin['flagged'] >= SPEAKING_FRACTION).unstack(0, fill_value=False).reindex(bins, fill_value=False)
+    speaking = (per_bin['flagged'] >= speaking_fraction).unstack(0, fill_value=False).reindex(bins, fill_value=False)
     runs = (speaking != speaking.shift()).cumsum()
     lengths = speaking.apply(lambda column: column.groupby(runs[column.name]).transform('size'))
-    speaking &= lengths >= MIN_SPEAKING_BINS
+    speaking &= lengths >= min_speaking_bins
     scores = per_bin['score'].unstack(0).reindex(bins).where(speaking)
     winners = {tick: row.idxmax() for tick, row in scores.iterrows() if row.notna().any()}
-    smoothed = {tick: vote_winner([winners.get(t) for t in bins[max(0, i - 2):i + 3]])
-                for i, tick in enumerate(bins)}
-    frame['auto_speaker'] = frame['time_bin'].map(smoothed).fillna('no_speaker')
+    if centered_vote:
+        winners = {tick: vote_winner([winners.get(t) for t in bins[max(0, i - 2):i + 3]])
+                   for i, tick in enumerate(bins)}
+    frame['auto_speaker'] = frame['time_bin'].map(winners).fillna('no_speaker')
     frame['auto_activity_label'] = np.where(frame['Badge_Name'] == frame['auto_speaker'], 'active', 'not_active')
     return frame
 
 
-def replay(args: argparse.Namespace) -> None:
+def replay(args: argparse.Namespace, *, speaking_fraction: float = SPEAKING_FRACTION,
+           min_speaking_bins: int = MIN_SPEAKING_BINS, centered_vote: bool = True) -> None:
     import pandas as pd
     frame = pd.read_csv(args.csv)
     required = {'Timestamp', 'Badge_Name', 'Sound_Level', 'Acceleration'}
@@ -226,8 +228,10 @@ def replay(args: argparse.Namespace) -> None:
         raise ValueError(f'Required columns: {sorted(required)}')
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    timing = dict(speaking_fraction=speaking_fraction, min_speaking_bins=min_speaking_bins,
+                  centered_vote=centered_vote)
     if set(FIELDS) <= set(frame):
-        label_frame(frame).to_csv(output, index=False, mode='x')
+        label_frame(frame, **timing).to_csv(output, index=False, mode='x')
         print(f'Wrote {output} from stored badge candidates.')
         return
     frame['Timestamp'] = pd.to_datetime(frame['Timestamp'], utc=True, format='ISO8601')
@@ -250,7 +254,7 @@ def replay(args: argparse.Namespace) -> None:
             result.append(row)
     if not result:
         raise ValueError('No readings to replay')
-    label_frame(pd.DataFrame(result)).to_csv(output, index=False, mode='x')
+    label_frame(pd.DataFrame(result), **timing).to_csv(output, index=False, mode='x')
     print(f'Wrote {output}; causal adaptation, not an exact historical reproduction.')
 
 
@@ -432,6 +436,12 @@ def main() -> None:
     replay_parser = commands.add_parser('replay', help='Replay paper-derived causal rules on an existing CSV')
     replay_parser.add_argument('csv')
     replay_parser.add_argument('--output', default=str(ROOT / 'outputs/replay.csv'))
+    replay_parser.add_argument('--speaking-fraction', type=float, default=SPEAKING_FRACTION,
+                               help='Minimum flagged fraction in a 500 ms bin (default: %(default)s)')
+    replay_parser.add_argument('--min-speaking-bins', type=int, default=MIN_SPEAKING_BINS,
+                               help='Minimum number of speaking bins in a run (default: %(default)s)')
+    replay_parser.add_argument('--no-centered-vote', action='store_true',
+                               help='Use the per-bin winner without the centered five-bin vote')
     train_parser = commands.add_parser('train', help='Train and export hybrid sensor tree')
     train_parser.add_argument('csv', nargs='+')
     train_parser.add_argument('--label', choices=['activity_label', 'auto_activity_label'], default='activity_label')
@@ -470,6 +480,11 @@ def main() -> None:
     viewer = commands.add_parser('viewer', help='Open the live BLE dashboard and independent observer tab')
     viewer.add_argument('--demo', action='store_true', help='Show explicitly labeled synthetic data without BLE')
     args = parser.parse_args()
+    if args.command == 'replay':
+        if not 0 < args.speaking_fraction <= 1:
+            replay_parser.error('--speaking-fraction must be greater than 0 and at most 1')
+        if args.min_speaking_bins < 1:
+            replay_parser.error('--min-speaking-bins must be at least 1')
     if args.command == 'receive' and (not math.isfinite(args.seconds) or args.seconds <= 0):
         parser.error('--seconds must be positive and finite')
     if args.command == 'receive' and (not math.isfinite(args.send_seconds) or not 0 <= args.send_seconds <= 600):
@@ -478,7 +493,8 @@ def main() -> None:
         if args.command == 'train':
             train(args)
         elif args.command == 'replay':
-            replay(args)
+            replay(args, speaking_fraction=args.speaking_fraction, min_speaking_bins=args.min_speaking_bins,
+                   centered_vote=not args.no_centered_vote)
         elif args.command == 'annotate':
             from observer import launch
             stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
