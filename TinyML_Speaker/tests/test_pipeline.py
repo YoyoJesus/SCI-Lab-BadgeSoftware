@@ -125,6 +125,42 @@ def test_invalid_readings_reset_history():
     assert detector.update(10, 0) is None
 
 
+def test_replay_can_label_a_short_turn_from_stored_candidates(tmp_path, monkeypatch):
+    import pandas as pd
+    import pipeline
+
+    rows = []
+    for sample in range(5):
+        row = dict.fromkeys(pipeline.FIELDS, 0)
+        row.update(Timestamp=f'2026-01-01T00:00:00.{sample}+00:00', Badge_Name='a',
+                   candidate=sample == 0, ready=True, speech_score=2)
+        rows.append(row)
+    source, output = tmp_path / 'input.csv', tmp_path / 'output.csv'
+    pd.DataFrame(rows).to_csv(source, index=False)
+    monkeypatch.setattr('sys.argv', [
+        'pipeline.py', 'replay', str(source), '--output', str(output),
+        '--speaking-fraction', '0.2', '--min-speaking-bins', '1', '--no-centered-vote',
+    ])
+    pipeline.main()
+    result = pd.read_csv(output)
+    assert result.auto_speaker.tolist() == ['a'] * 5
+    assert result.candidate.tolist() == [True, False, False, False, False]
+
+
+@pytest.mark.parametrize(('option', 'value'), [
+    ('--speaking-fraction', '0'), ('--speaking-fraction', 'nan'),
+    ('--speaking-fraction', '1.1'), ('--min-speaking-bins', '0'),
+])
+def test_replay_rejects_invalid_timing_options(monkeypatch, capsys, option, value):
+    from pipeline import main
+
+    monkeypatch.setattr('sys.argv', ['pipeline.py', 'replay', 'unused.csv', option, value])
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert f'error: {option}' in capsys.readouterr().err
+
+
 def test_vote_needs_three_wins_and_preserves_silence():
     assert vote_winner(['a', 'a', None, 'a', 'b']) == 'a'
     assert vote_winner(['a', 'a', None, 'b', 'b']) is None

@@ -52,6 +52,24 @@ unknown. Existing files are never overwritten. Start a new file after a crash.
 You can correct the interval CSV afterward; do not create overlapping intervals
 for the same badge. Different badges may overlap freely.
 
+## Add a second observer
+
+The desktop viewer can serve a page for a second observer; see
+[VIEWER.md](VIEWER.md#second-observer). To combine two reference files
+yourself:
+
+```powershell
+.\run.bat combine outputs/session/reference.csv outputs/session/reference_observer2.csv --output outputs/session/reference_consensus.csv --report outputs/session/observer_agreement.json
+```
+
+The consensus keeps a label only where both observers gave the same known
+label, and marks everything else unknown. The report gives time-weighted
+agreement and Cohen's kappa over time both observers labeled, plus the median
+gap between their speaking starts and ends (second minus first, matched within
+3 s). That onset gap is a direct measurement of how differently the two
+observers react, and a better basis for `--onset-ms` than detector agreement.
+Merge the consensus file like any other reference file.
+
 ## Merge with the badge readings
 
 Reference CSV fields are `Recording_ID`, `Badge_Name`, `Start`, `End`, and

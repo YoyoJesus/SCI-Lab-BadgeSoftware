@@ -182,3 +182,30 @@ def test_wearer_names_go_to_participants_md_not_reference_csv(tmp_path, tk_windo
         assert 'Test' not in (viewer.session_dir / 'reference.csv').read_text(encoding='utf-8')
     finally:
         viewer.close()
+
+
+def test_second_observer_link_opens_with_panel_and_closes_with_it(tmp_path, monkeypatch, tk_window):
+    import viewer as viewer_module
+    from remote_observer import RemoteObserver
+    monkeypatch.setattr(viewer_module, 'RemoteObserver',
+                        lambda *args: RemoteObserver(*args, host='127.0.0.1', port=0))
+    app = SpeakerViewer(tk_window, output_root=tmp_path)
+    try:
+        app.session_dir = tmp_path / 'session'
+        app.create_observer(['badge_01', 'badge_02'])
+        remote = app.remote
+        assert remote is not None and remote.code in remote.url
+        import gc
+        gc.collect()
+
+        def entries(widget):
+            for child in widget.winfo_children():
+                if isinstance(child, ttk.Entry):
+                    yield child
+                yield from entries(child)
+        assert remote.url in [entry.get() for entry in entries(app.reference_pane)]
+        app.observer.close()
+        assert app.remote is None and remote.recorder.closed
+        assert (app.session_dir / 'reference_observer2.csv').exists()
+    finally:
+        app.close()

@@ -90,6 +90,36 @@ file. Train from multiple independently labeled sessions using the existing
 
 ![Live plots beside the observer panel with synthetic badge identities](docs/screenshots/viewer-annotating.png)
 
+### Second observer
+
+While the panel is open, the viewer also serves a page for a second observer,
+who labels every badge independently in a browser on a phone or another
+computer on the same network. On a computer the page uses the same keys as the
+panel (1–9, 0, Space, Enter); on a phone, tap the buttons.
+The link appears above the observer controls and includes a six-digit code
+that changes every recording. Windows Firewall may ask to allow Python on
+private networks the first time. Only use this on a network you trust; the
+page is plain HTTP and the code is the only access check.
+
+The PC timestamps each key press or click when it arrives, so both observers share one clock.
+If that browser window loses focus (another window, tab, or app, or a locked
+screen), or the page loses contact with the PC for 3 s, the second observer's
+labels become unknown until they start again. The
+session ends when the local panel finishes or the recording stops. Labels are
+saved to `reference_observer2.csv`.
+
+When the second observer labeled anything, **Merge observer labels** keeps only
+the labels both observers agree on. Disagreements and time either observer
+paused become unknown. It also writes `reference_consensus.csv` and
+`observer_agreement.json`, and shows the agreement in the status line. If the
+second observer never started, the merge uses `reference.csv` alone.
+
+![Second observer page in a laptop browser with synthetic badge names](docs/screenshots/second-observer-page.png)
+
+![Second observer page at phone width with synthetic badge names](docs/screenshots/second-observer-phone.png)
+
+![Second observer link in the viewer's observer pane](docs/screenshots/viewer-second-observer.png)
+
 ## Review past runs
 
 Click **Open past run** and pick a `*_raw.csv` file, either from a viewer session
